@@ -221,7 +221,7 @@ namespace flowhook
         for (auto &t : config_obj["tasks"])
         {
             Task _ts = TRY(convert_json_to_task(t), void);
-            if (_ts.name == task.name)
+            if (_ts.id == task.id)
             {
                 return Result<void>::Err(FWError::make(
                     ErrorCode::TASK_ALREADY_EXISTS, "Error: task already exists, use update_task to update it"));
@@ -238,8 +238,8 @@ namespace flowhook
     {
         for (auto it = config_obj["tasks"].begin(); it != config_obj["tasks"].end(); it++)
         {
-            string name = it->at("task_name");
-            if (name == task.name)
+            string id = it->at("working_directory");
+            if (id == task.id)
             {
                 json _json_task = TRY(convert_task_to_json(task), void);
                 *it = _json_task;
@@ -277,8 +277,8 @@ namespace flowhook
     {
         for (auto it = config_obj["tasks"].begin(); it != config_obj["tasks"].end(); it++)
         {
-            string name = it->at("task_name");
-            if (name == task.name)
+            string id = it->at("working_directory");
+            if (id == task.id)
             {
                 config_obj["tasks"].erase(it);
                 return Result<void>::Ok();
