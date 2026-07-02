@@ -60,19 +60,7 @@ While there are other file watchers out there, FlowHook was designed with a few 
 
 This is the easiest way to get started with FlowHook.
 
-1. Download the latest release from the [GitHub releases page](https://github.com/etcoder-642/FlowHook/releases).
-   You can use this command to download the latest release:
-```bash
-curl -L -o flowhook https://github.com/etcoder-642/FlowHook/releases/latest/download/flowhook
-```
-2. Make the `flowhook` binary executable:
-```bash
-chmod +x flowhook
-```
-3. Move it into your local binary path for system-wide access
-```bash
-sudo mv flowhook /usr/local/bin/
-```
+1. You can grab the latest release from the [GitHub releases page](https://github.com/etcoder-642/FlowHook/releases/latest). Steps to download the binary release can be found in the release page.
 
 #### Option 2
 
