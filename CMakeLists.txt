@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(FlowHook VERSION 0.1.0)
+project(FlowHook VERSION 0.1.1)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 configure_file(src/version.h.in version.h)
 set(CMAKE_CXX_STANDARD 20)
