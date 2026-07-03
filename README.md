@@ -54,7 +54,11 @@ This is the easiest way to get started with FlowHook.
 ```bash
 unzip flowhook.zip 
 ```
-3. Move the `flowhook` binary to a directory in your `PATH` (e.g. `/usr/local/bin`).
+3. Grant execute permissions to the `flowhook` binary.
+```bash
+chmod +x flowhook
+```
+4. Move the `flowhook` binary to a directory in your `PATH` (e.g. `/usr/local/bin`).
 ```bash
 sudo mv flowhook /usr/local/bin/
 ```
