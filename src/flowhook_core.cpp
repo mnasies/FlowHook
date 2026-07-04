@@ -214,6 +214,18 @@ Result<int> FlowHookCore::get_task_depth(const std::string &task_id) {
       ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
 }
 
+Result<int> FlowHookCore::get_task_timeout(const std::string &task_id) {
+  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+    if ((*it)->get_task_id() == task_id) {
+      int t = (*it)->get_build_timeout();
+      return Result<int>::Ok(t);
+    }
+  }
+  return Result<int>::Err(FWError::make(
+      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+}
+
+
 Result<bool> FlowHookCore::is_task_active(const std::string &task_id) {
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     if ((*it)->get_task_id() == task_id) {
