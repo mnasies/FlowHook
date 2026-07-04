@@ -67,7 +67,7 @@ namespace flowhook
         std::stringstream ss;
         ss << std::put_time(std::localtime(&now_time), "%Y-%m-%dT%H:%M:%S");
 
-        session["session-timestamp"] = ss.str();
+        session["session-start-timestamp"] = ss.str();
         session["session_log"] = json::array();
         flushed = false;
         is_running = true;
@@ -146,6 +146,12 @@ namespace flowhook
 
         if (!flushed)
         {
+            auto now = std::chrono::system_clock::now();
+            std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+            std::stringstream ss;
+            ss << std::put_time(std::localtime(&now_time), "%Y-%m-%dT%H:%M:%S");
+
+            session["session-end-timestamp"] = ss.str();
             try
             {
                 file << session.dump(4) << endl;
