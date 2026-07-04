@@ -25,6 +25,9 @@ namespace flowhook_cli {
         static bool depth;
         check->add_flag("--depth", depth, "Outputs the watching depth set from your working directory.");
 
+        static bool timeout = false;
+        check->add_flag("--timeout", timeout, "Outputs the timeout set for the commands executed by the task.");
+
         check->callback([=]() mutable {
           std::string check_task_id = fs::current_path().string();
 
@@ -36,6 +39,17 @@ namespace flowhook_cli {
                   std::cout << "FlowHook task is initialized in the current directory." << std::endl;
                   return;
               }
+          }
+
+          if(timeout) {
+              auto r = fh->get_task_timeout(check_task_id);
+              if(r.isErr()) {
+                  std::cout << "Failed to get task timeout: " << r.getErrMessage()
+                            << std::endl;
+                  return;
+              }
+              std::cout << "Task timeout: " << r.unwrap() << " seconds" << std::endl;
+              return;
           }
 
           if (active) {

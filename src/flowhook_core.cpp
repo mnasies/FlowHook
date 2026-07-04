@@ -54,6 +54,7 @@ Result<void> FlowHookCore::init() {
       tr->deactivate();
     }
     tr->set_depth(task.watching_depth);
+    tr->set_timeout(task.build_timeout);
 
     for (auto c : task.commands)
       TEST(tr->add_command(c));
@@ -171,13 +172,26 @@ Result<void> FlowHookCore::set_depth(const std::string &task_id, int depth) {
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     if ((*it)->get_task_id() == task_id) {
       TEST((*it)->set_depth(depth));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       return Result<void>::Ok();
     }
   }
   return Result<void>::Err(FWError::make(
       ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
 }
+
+Result<void> FlowHookCore::set_timeout(const std::string &task_id, int timeout) {
+  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+    if ((*it)->get_task_id() == task_id) {
+      TEST((*it)->set_timeout(timeout));
+      TEST(config_manager->update_task((*it)->get_task()));
+      return Result<void>::Ok();
+    }
+  }
+  return Result<void>::Err(FWError::make(
+      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+}
+
 
 std::vector<std::string>
 FlowHookCore::get_resolved_files(const std::string task_id) {
@@ -200,6 +214,18 @@ Result<int> FlowHookCore::get_task_depth(const std::string &task_id) {
       ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
 }
 
+Result<int> FlowHookCore::get_task_timeout(const std::string &task_id) {
+  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+    if ((*it)->get_task_id() == task_id) {
+      int t = (*it)->get_build_timeout();
+      return Result<int>::Ok(t);
+    }
+  }
+  return Result<int>::Err(FWError::make(
+      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+}
+
+
 Result<bool> FlowHookCore::is_task_active(const std::string &task_id) {
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     if ((*it)->get_task_id() == task_id) {
@@ -215,7 +241,7 @@ Result<void> FlowHookCore::activate_task(const std::string &task_id) {
     string id = (*it)->get_task_id();
     if (id == task_id) {
       (*it)->activate();
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_VERBOSE("[FLOWHOOK] Task activated: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -230,7 +256,7 @@ Result<void> FlowHookCore::deactivate_task(const std::string &task_id) {
     string id = (*it)->get_task_id();
     if (id == task_id) {
       (*it)->deactivate();
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_VERBOSE("[FLOWHOOk] Task deactivated: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -250,7 +276,7 @@ Result<void> FlowHookCore::set_task_path(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->add_path(path));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task path set: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -266,7 +292,7 @@ Result<void> FlowHookCore::delete_task_path(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->delete_path(path));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task path deleted: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -282,7 +308,7 @@ Result<void> FlowHookCore::set_ignored_path(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->add_ignored_path(path));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task ignore path set: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -298,7 +324,7 @@ Result<void> FlowHookCore::set_ignored_pattern(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->add_ignored_pattern(pattern));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task ignore pattern set: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -314,7 +340,7 @@ Result<void> FlowHookCore::remove_ignored_path(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->remove_ignored_path(path));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Ignored path removed: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -330,7 +356,7 @@ Result<void> FlowHookCore::remove_ignored_pattern(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->remove_ignored_pattern(pattern));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Ignored pattern removed: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -346,7 +372,7 @@ Result<void> FlowHookCore::set_task_command(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->add_command(command));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task command set: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -361,7 +387,7 @@ Result<void> FlowHookCore::delete_task_command(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->delete_command(command));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task command deleted: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -382,7 +408,7 @@ Result<void> FlowHookCore::set_task_on_success(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->add_on_success(command));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task on success set: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -397,7 +423,7 @@ Result<void> FlowHookCore::delete_task_on_success(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->delete_on_success(command));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task on success deleted: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -418,7 +444,7 @@ Result<void> FlowHookCore::set_task_on_failure(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->add_on_failure(command));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task on failure set: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -433,7 +459,7 @@ Result<void> FlowHookCore::delete_task_on_failure(const std::string &task_id,
     string id = (*it)->get_task_id();
     if (id == task_id) {
       TEST((*it)->delete_on_failure(command));
-      config_manager->update_task((*it)->get_task());
+      TEST(config_manager->update_task((*it)->get_task()));
       FW_LOG("[DEBUG] Task on failure deleted: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -456,7 +482,7 @@ Result<void> FlowHookCore::start_task(const std::string &task_id) {
                           "Error: task already running " + task_id + " ✗"));
       }
       FW_LOG("[DEBUG] Starting task_runner...");
-      (*it)->start();
+      TEST((*it)->start());
       FW_VERBOSE("[FLOWHOOK] Task started: " + task_id + " ✓");
       return Result<void>::Ok();
     }
@@ -475,7 +501,7 @@ Result<void> FlowHookCore::stop_task(const std::string &task_id) {
             FWError::make(ErrorCode::TASK_NOT_RUNNING,
                           "Error: task not running " + task_id + " ✗"));
       }
-      (*it)->stop();
+      TEST((*it)->stop());
       FW_VERBOSE("[FLOWHOOK] Task stopped: " + task_id + " ✓");
       return Result<void>::Ok();
     }
