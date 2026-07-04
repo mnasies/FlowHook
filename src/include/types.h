@@ -79,10 +79,12 @@ namespace flowhook
         bool isActive = false;
         bool isRunning = false;
 
+        int build_timeout = 0;
+
         bool isNull() const {
             return id.empty() && name.empty() && commands.empty() && file_paths.empty() && dir_paths.empty() &&
                 on_success.empty() && on_failure.empty() && !isActive && !isRunning && watching_depth == 3 &&
-                ignored_paths.empty() && ignored_patterns.empty();
+                ignored_paths.empty() && ignored_patterns.empty() && build_timeout == 0;
         }
     };
 

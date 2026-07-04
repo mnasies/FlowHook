@@ -28,6 +28,7 @@ namespace flowhook {
 
             Result<void> set_default_ignored();
             Result<void> set_depth(const std::string &task_id, int depth);
+            Result<void> set_timeout(const std::string &task_id, int timeout);
             Result<void> create_task(const std::string &task_name, const std::string &task_id);
             Result<void> delete_task(const std::string &task_id);
             bool is_task(const std::string &task_id);
@@ -35,6 +36,8 @@ namespace flowhook {
             std::vector<std::string> get_resolved_files(const std::string task_id);
             Result<bool> is_task_active(const std::string &task_id);
             Result<int> get_task_depth(const std::string &task_id);
+            Result<int> get_task_timeout(const std::string &task_id);
+
 
             Result<void> start_task(const std::string &task_id);
             Result<void> stop_task(const std::string &task_id);

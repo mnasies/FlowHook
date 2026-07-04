@@ -55,6 +55,7 @@ namespace flowhook
         EMPTY_VALUE,
         VALUE_NOT_FOUND,
         INVALID_DEPTH,
+        INVALID_TIMEOUT,
 
         UNKNOWN
     };

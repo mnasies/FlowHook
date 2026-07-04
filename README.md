@@ -19,10 +19,11 @@
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Quick Demo](#quick-demo)
-3. [Installation](#installation)
-4. [Command Reference & Usage](#command-reference--usage)
-5. [Limitations](#limitations)
-6. [Contributing](#contributing)
+3. [What Makes it Different?](#what-makes-it-different)
+4. [Installation](#installation)
+5. [Command Reference & Usage](#command-reference--usage)
+6. [Limitations](#limitations)
+7. [Contributing](#contributing)
 
 
 ### Introduction

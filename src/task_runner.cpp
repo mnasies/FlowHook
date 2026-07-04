@@ -78,6 +78,16 @@ Result<void> TaskRunner::set_depth(int num) {
   return Result<void>::Ok();
 }
 
+Result<void> TaskRunner::set_timeout(int timeout) {
+    if(timeout <= 0) {
+        return Result<void>::Err(FWError::make(
+            ErrorCode::INVALID_TIMEOUT, "Error: invalid timeout set - timeout must be greater than 0"));
+    }
+  task.build_timeout = timeout;
+  FW_LOG("[DEBUG] Timeout set to " + std::to_string(timeout));
+  return Result<void>::Ok();
+}
+
 Result<void> TaskRunner::change_task_name(const string &task_name) {
   // check if task name is empty
   if (task_name.empty()) {
@@ -422,8 +432,9 @@ Result<void> TaskRunner::execute(const WatchEvent &e) {
 
   for (auto &cmd : task.commands) {
     FW_LOG("[DEBUG] Executing command through pipes ....");
+    int timeout = task.build_timeout;
     string secure_execution_chain =
-        "cd " + task.id + " && timeout 15s " + cmd + " 2>&1";
+        "cd " + task.id + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd + " 2>&1";
     FILE *fp = popen(secure_execution_chain.c_str(), "r");
     if (fp == NULL) {
       return Result<void>::Err(
@@ -466,13 +477,17 @@ Result<void> TaskRunner::execute(const WatchEvent &e) {
     if (true_exit_code != 0) {
       for (auto &cmd_i : task.on_failure) {
         FW_LOG("[DEBUG] Executing failure commands...");
-        string exec_chain = "cd " + task.id + " && timeout 15s " + cmd_i;
+        int timeout = task.build_timeout;
+        string exec_chain =
+            "cd " + task.id + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd_i;
         system(exec_chain.c_str());
       }
     } else {
       for (auto &cmd_i : task.on_success) {
         FW_LOG("[DEBUG] Executing success commands...");
-        string exec_chain = "cd " + task.id + " && timeout 15s " + cmd_i;
+        int timeout = task.build_timeout;
+        string exec_chain =
+            "cd " + task.id + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd_i;
         system(exec_chain.c_str());
       }
     }
