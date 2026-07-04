@@ -36,6 +36,8 @@ namespace flowhook {
             Result<bool> is_task_active(const std::string &task_id);
             Result<int> get_task_depth(const std::string &task_id);
 
+            Result<void> set_timeout(const std::string &task_id, int timeout);
+
             Result<void> start_task(const std::string &task_id);
             Result<void> stop_task(const std::string &task_id);
 

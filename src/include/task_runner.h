@@ -4,6 +4,7 @@
 #include <string>
 #include <chrono>
 
+#include "error/result.h"
 #include "types.h"
 #include "filewatcher.h"
 #include "session_logger.h"
@@ -39,6 +40,7 @@ namespace flowhook
         std::string get_task_id() const { return task.id; }
         Task get_task() const { return task; }
         std::vector<std::string> get_resolved_files() const { return resolved_files; }
+        int get_build_timeout() const { return task.build_timeout; }
 
 
         bool isIgnored(const std::string &path);
@@ -48,6 +50,7 @@ namespace flowhook
         void deactivate() { task.isActive = false; }
         bool is_running() const { return task.isRunning; }
         Result<void> set_depth(int num);
+        Result<void> set_timeout(int timeout);
 
         Result<void> change_task_name(const std::string &task_name);
         Result<void> change_working_directory(const std::string &working_directory);

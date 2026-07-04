@@ -21,6 +21,9 @@ namespace flowhook_cli {
         static bool active = false;
         set->add_flag("--active", active, "Set task as active \n // enables you to run specified tasks with the `run active` command");
 
+        static int timeout = INT_MIN;
+        set->add_option("--timeout", timeout, "Set the timeout for your commands in seconds \n // if the command takes longer than the specified time, it will be terminated.");
+
         static bool deactive = false;
         set->add_flag("--deactive", deactive, "Set a task enables active as deactive");
 
@@ -56,6 +59,16 @@ namespace flowhook_cli {
               return;
             }
             std::cout << "Depth set to " << depth << std::endl;
+          }
+          if(timeout != INT_MIN)
+          {
+            auto r = fh->set_timeout(set_task_id, timeout);
+            if (r.isErr()) {
+              std::cout << "Failed to set timeout: " << r.getErrMessage()
+                        << std::endl;
+              return;
+            }
+            std::cout << "Timeout set to " << timeout << "s" << std::endl;
           }
         });
     }
