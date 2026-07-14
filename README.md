@@ -10,7 +10,7 @@
 
 ```
 
-[![Build Status](https://github.com/etcoder-642/FlowHook/actions/workflows/tests.yml/badge.svg)](https://github.com/etcoder-642/FlowHook/actions) 
+[![Build Status](https://github.com/mnasies/FlowHook/actions/workflows/tests.yml/badge.svg)](https://github.com/mnasies/FlowHook/actions) 
 ![C++ Version](https://img.shields.io/badge/Language-C%2B%2B17%2F20-blue?logo=cplusplus)
 ![Platform](https://img.shields.io/badge/Platform-Linux-orange?logo=linux)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -50,7 +50,7 @@ While there are other file watchers out there, FlowHook was designed with a few 
 
 This is the easiest way to get started with FlowHook.
 
-1. Grab the latest release from the [GitHub releases page](https://github.com/etcoder-642/FlowHook/releases/latest).
+1. Grab the latest release from the [GitHub releases page](https://github.com/mnasies/FlowHook/releases/latest).
 2. Unzip the downloaded file.
 ```bash
 unzip flowhook.zip 
@@ -77,7 +77,7 @@ Then compile and install:
 1. Clone and navigate into the project
 
 ```Bash
-git clone https://github.com/etcoder-642/FlowHook.git
+git clone https://github.com/mnasies/FlowHook.git
 cd FlowHook
 ```
 2. Create and enter a clean build directory
@@ -257,7 +257,7 @@ These are known gaps, not surprises. Issues and PRs addressing any of them are w
 ## Contributing
 FlowHook is early-stage and contributions are genuinely welcome, from bug fixes to feature ideas.
 
-- Found a bug? [Open an issue](https://github.com/etcoder-642/FlowHook/issues).
+- Found a bug? [Open an issue](https://github.com/mnasies/FlowHook/issues).
 - Have a feature in mind? Open an issue to discuss before submitting a large PR.
 - **PRs should target the `dev` branch, not `main`.** `main` is reserved for tagged releases. I merge from `dev` myself once changes are reviewed and versioned.
 
@@ -265,7 +265,7 @@ No formal contribution guide yet. For now, fork, branch off `dev`, and open a PR
 
 ## Author
 
-[mnasie](https://github.com/etcoder-642) | aspiring systems engineer
+[mnasie](https://github.com/mnasies) | aspiring systems engineer
 
 ## Used 
 
