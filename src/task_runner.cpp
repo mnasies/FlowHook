@@ -6,9 +6,10 @@
 #include <sys/inotify.h>
 #include <vector>
 
-#include "error/error.h"
-#include "error/result.h"
+#include "include/error/error.h"
+#include "include/error/result.h"
 #include "include/macros.hpp"
+#include "types.h"
 #include "include/task_runner.h"
 
 namespace fs = std::filesystem;
@@ -565,10 +566,19 @@ Result<void> TaskRunner::stop() {
   }
 
   int count = 0;
+
+  // unlink all linked events
   for (auto &cb : callbacks) {
     TEST(fw->unlink_event(IN_CLOSE_WRITE, cb));
+    TEST(fw->unlink_event(IN_MODIFY, cb));
+    TEST(fw->unlink_event(IN_MOVED_FROM, cb));
     count++;
   }
+
+  // remove the callback added at start
+  WatchCallback callback = {this, &TaskRunner::execute};
+  TEST(delete_callback(callback));
+
   TEST(fw->stop());
   TEST(sl->stop());
   task.isRunning = false;

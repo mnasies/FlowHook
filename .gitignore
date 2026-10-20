@@ -76,3 +76,7 @@ Testing/
 
 #system metadata
 *.DS_Store
+
+# agent files
+
+.agents
