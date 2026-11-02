@@ -57,6 +57,7 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(flowhook cli/src/main.cpp
+                         cli/src/cli_utils.cpp
                             cli/src/commands/add.cpp
                             cli/src/commands/run.cpp
                             cli/src/commands/init.cpp

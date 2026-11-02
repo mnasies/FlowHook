@@ -8,9 +8,7 @@
 namespace fs = std::filesystem;
 
 namespace flowhook_cli {
-void register_run(CLI::App *app, flowhook::FlowHookCore *fh) {
-    auto _fh = flowhook::FlowHookCore::create();
-    fh = handle_fh_error(_fh);
+void register_run(CLI::App *app, flowhook::FlowHookCore *&fh) {
   auto *run = app->add_subcommand("run", "running a task");
 
   // this is a purely ceremonial flag(so that CLI11 won't say there is
@@ -30,8 +28,11 @@ void register_run(CLI::App *app, flowhook::FlowHookCore *fh) {
   static bool run_active = false;
   run->add_flag("--active", run_active, "Run active task instances");
 
-  run->callback([=]() mutable {
-    std::string run_task_id = fs::current_path().string();
+  run->callback([=, &fh]() mutable {
+      auto _fh = flowhook::FlowHookCore::create();
+      fh = handle_fh_error(_fh);
+
+      std::string run_task_id = fs::current_path().string();
 
     if (run_all) {
       auto r = fh->start_all();

@@ -7,10 +7,8 @@
 
 namespace fs = std::filesystem;
 namespace flowhook_cli {
-    void register_init(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_init(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
-        auto _fh = flowhook::FlowHookCore::lazy_create();
-        fh = handle_fh_error(_fh);
 
         // init subcommand
         auto *init =
@@ -25,8 +23,11 @@ namespace flowhook_cli {
         static std::string task_name = "";
         init->add_option("--task", task_name, "Task name to initialize [optional] \n// filename of the current folder will be taken as task name if not provided");
 
-        init->callback([=]() mutable {
-          fs::path cwd = fs::canonical(fs::current_path());
+        init->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::lazy_create();
+            fh = handle_fh_error(_fh);
+
+            fs::path cwd = fs::canonical(fs::current_path());
 
           if (task_name.empty())
             task_name = cwd.filename().string();

@@ -7,9 +7,7 @@
 namespace fs = std::filesystem;
 namespace flowhook_cli {
 
-void register_remove(CLI::App *app, flowhook::FlowHookCore *fh) {
-    auto _fh = flowhook::FlowHookCore::create();
-    fh = handle_fh_error(_fh);
+void register_remove(CLI::App *app, flowhook::FlowHookCore *&fh) {
 
     // add subcommand
   auto *remove =
@@ -42,8 +40,11 @@ void register_remove(CLI::App *app, flowhook::FlowHookCore *fh) {
   static bool force = false;
   remove->add_flag("-f", force, "removes flowhook instance without providing a dialog to check certainity");
 
-  remove->callback([=]() mutable {
-    fs::path cwd = fs::current_path();
+  remove->callback([=, &fh]() mutable {
+      auto _fh = flowhook::FlowHookCore::create();
+      fh = handle_fh_error(_fh);
+
+      fs::path cwd = fs::current_path();
     task_id = cwd.string();
 
     bool remove_task = false;

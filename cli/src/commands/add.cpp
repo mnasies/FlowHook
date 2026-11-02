@@ -7,9 +7,7 @@
 namespace fs = std::filesystem;
 namespace flowhook_cli {
 
-void register_add(CLI::App *app, flowhook::FlowHookCore *fh) {
-    auto _fh = flowhook::FlowHookCore::create();
-    fh = handle_fh_error(_fh);
+void register_add(CLI::App *app, flowhook::FlowHookCore *&fh) {
 
     // add subcommand
   auto *add =
@@ -40,8 +38,11 @@ void register_add(CLI::App *app, flowhook::FlowHookCore *fh) {
   add->add_option("--ignored-path", ignored_path, "Ignored path [optional] \n// if not provided, all files will be watched in the working directory\n");
   add->add_option("--ignored-pattern", ignored_pattern, "Ignored pattern [optional] \n// if not provided, no pattern will be ignored in the working directory\n");
 
-  add->callback([=]() mutable {
-    fs::path cwd = fs::current_path();
+  add->callback([=, &fh]() mutable {
+      auto _fh = flowhook::FlowHookCore::create();
+      fh = handle_fh_error(_fh);
+
+      fs::path cwd = fs::current_path();
     task_id = cwd.string();
 
     if (add_n_path.empty() && add_command.empty() &&

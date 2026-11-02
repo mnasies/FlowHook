@@ -9,10 +9,8 @@
 
 namespace fs = std::filesystem;
 namespace flowhook_cli {
-    void register_list(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_list(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
-        auto _fh = flowhook::FlowHookCore::lazy_create();
-        fh = handle_fh_error(_fh);
         auto* list = app->add_subcommand("list", "listing all tasks, paths, commands, and ignored patterns");
 
         // this is a purely ceremonial flag(so that CLI11 won't say there is unrecognized flag)
@@ -36,7 +34,10 @@ namespace flowhook_cli {
         list->add_flag("--on-success", list_on_success, "List all on success commands to run in the current directory.");
         list->add_flag("--on-failure", list_on_failure, "List all on failure commands to run in the current directory.");
 
-        list->callback([=]() mutable {
+        list->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::lazy_create();
+            fh = handle_fh_error(_fh);
+
             list_task_id = fs::current_path().string();
             std::vector<flowhook::Task> tasks = fh->get_tasks();
             flowhook::Task* ts = nullptr;

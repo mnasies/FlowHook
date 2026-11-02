@@ -7,10 +7,8 @@
 namespace fs = std::filesystem;
 
 namespace flowhook_cli {
-    void register_check(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_check(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
-        auto _fh = flowhook::FlowHookCore::lazy_create();
-        fh = handle_fh_error(_fh);
         auto* check = app->add_subcommand("check", "check the status of the task");
 
         // this is a purely ceremonial flag(so that CLI11 won't say there is unrecognized flag)
@@ -31,8 +29,11 @@ namespace flowhook_cli {
         static bool timeout = false;
         check->add_flag("--timeout", timeout, "Outputs the timeout set for the commands executed by the task.");
 
-        check->callback([=]() mutable {
-          std::string check_task_id = fs::current_path().string();
+        check->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::lazy_create();
+            fh = handle_fh_error(_fh);
+
+            std::string check_task_id = fs::current_path().string();
 
           if(!active && !deactive && !depth) {
               if(!fh->is_task(check_task_id)) {
