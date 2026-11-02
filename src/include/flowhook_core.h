@@ -22,8 +22,10 @@ namespace flowhook {
 
             bool isValidDir(std::string &path);
             Result<void> init();
+            Result<void> lazy_init();
         public:
             static Result<FlowHookCore*> create();
+            static Result<FlowHookCore*> lazy_create();
             ~FlowHookCore();
 
             Result<void> set_default_ignored();

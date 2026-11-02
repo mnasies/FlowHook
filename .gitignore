@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# repomix output
+repomix-output.xml
+
 compile_commands.json
 diagram.md
 # Compiled Object files

@@ -61,6 +61,43 @@ fs::path get_home_directory() {
     return fs::path();
 }
 
+FlowHookCore * handle_fh_error(Result<FlowHookCore *> _fh) {
+    if (_fh.isErr()) {
+        if(_fh.getErrCode() == ErrorCode::CONFIG_PARSE_FAILED)
+        {
+            std::cerr << "Config file is corrupted." << std::endl;
+            fs::path config_path = get_home_directory() / ".config" / "flowhook"/ "config.json";
+            std::cout << "Path : " << config_path << std::endl;
+            std::cerr << "Options: " << std::endl;
+            std::cout << " [1] clear all data and start fresh" << std::endl;
+            std::cout << " [2] exit and fix manually" << std::endl;
+
+            std::cout << "Enter your choice: ";
+            int choice;
+            std::cin >> choice;
+            if (choice == 1)
+            {
+                fs::remove(config_path);
+                std::cout << "Config file cleared. Starting fresh..." << std::endl;
+                return nullptr;
+            }
+            else if (choice == 2)
+                return nullptr;
+            else
+                std::cerr << "Invalid choice." << std::endl;
+            return nullptr;
+        }
+        else
+        {
+            std::cerr << "Failed to create FlowHook instance: " << _fh.getErrMessage()
+                << std::endl;
+            return nullptr;
+        }
+    }
+    fh = _fh.unwrap();
+    return fh;
+}
+
 int main(int argc, char **argv) {
     signal(SIGINT, handle_sigint);
 

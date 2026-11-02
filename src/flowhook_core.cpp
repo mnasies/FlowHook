@@ -19,6 +19,12 @@ Result<FlowHookCore *> FlowHookCore::create() {
   return Result<FlowHookCore *>::Ok(core);
 }
 
+Result<FlowHookCore *> FlowHookCore::lazy_create() {
+    FlowHookCore *core = new FlowHookCore();
+    TEST_OVERLOADED(core->lazy_init(), FlowHookCore *);
+    return Result<FlowHookCore *>::Ok(core);
+}
+
 FlowHookCore::~FlowHookCore() {
   config_manager->flush();
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
@@ -32,6 +38,12 @@ Result<void> FlowHookCore::set_default_ignored() {
                               "*.pyc", "*.log", "*.git"};
   default_ignored_paths = {".git"};
   return Result<void>::Ok();
+}
+
+Result<void> FlowHookCore::lazy_init() {
+    config_manager = TRY(ConfigManager::create(), void);
+    FW_VERBOSE("[FLOWHOOK] a lazy Flowhook core instance initialized.");
+    return Result<void>::Ok();
 }
 
 Result<void> FlowHookCore::init() {
