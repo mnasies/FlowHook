@@ -577,6 +577,14 @@ Result<void> FlowHookCore::start_active() {
 }
 
 std::vector<Task> FlowHookCore::get_tasks() const {
+    if(task_runners.empty()) {
+        auto _ts = config_manager->get_tasks();
+        if(_ts.isOk()) {
+            return _ts.unwrap();
+        } else {
+            return vector<Task>();
+        }
+    }
   vector<Task> tasks;
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     tasks.push_back((*it)->get_task());
