@@ -2,6 +2,7 @@
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
 #include "../../src/include/types.h"
+#include "../include/cli_utils.h"
 
 #include <vector>
 
@@ -10,6 +11,8 @@ namespace fs = std::filesystem;
 namespace flowhook_cli {
     void register_list(CLI::App* app, flowhook::FlowHookCore* fh)
     {
+        auto _fh = flowhook::FlowHookCore::lazy_create();
+        fh = handle_fh_error(_fh);
         auto* list = app->add_subcommand("list", "listing all tasks, paths, commands, and ignored patterns");
 
         // this is a purely ceremonial flag(so that CLI11 won't say there is unrecognized flag)

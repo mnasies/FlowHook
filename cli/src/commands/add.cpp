@@ -1,12 +1,15 @@
 #include "../../src/include/flowhook_core.h"
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
+#include "../include/cli_utils.h"
 
 
 namespace fs = std::filesystem;
 namespace flowhook_cli {
 
 void register_add(CLI::App *app, flowhook::FlowHookCore *fh) {
+    auto _fh = flowhook::FlowHookCore::create();
+    fh = handle_fh_error(_fh);
 
     // add subcommand
   auto *add =

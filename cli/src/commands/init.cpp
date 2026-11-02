@@ -1,6 +1,7 @@
 #include "../../src/include/flowhook_core.h"
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
+#include "../include/cli_utils.h"
 #include <filesystem>
 
 
@@ -8,6 +9,9 @@ namespace fs = std::filesystem;
 namespace flowhook_cli {
     void register_init(CLI::App* app, flowhook::FlowHookCore* fh)
     {
+        auto _fh = flowhook::FlowHookCore::lazy_create();
+        fh = handle_fh_error(_fh);
+
         // init subcommand
         auto *init =
             app->add_subcommand("init", "initializing a new FlowHook task instance in the current folder");

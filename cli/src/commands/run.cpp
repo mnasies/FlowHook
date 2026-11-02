@@ -1,6 +1,7 @@
 #include "../../src/include/flowhook_core.h"
 #include "../../src/include/macros.hpp"
 #include "../include/CLI11.hpp"
+#include "../include/cli_utils.h"
 
 #include <filesystem>
 
@@ -8,6 +9,8 @@ namespace fs = std::filesystem;
 
 namespace flowhook_cli {
 void register_run(CLI::App *app, flowhook::FlowHookCore *fh) {
+    auto _fh = flowhook::FlowHookCore::create();
+    fh = handle_fh_error(_fh);
   auto *run = app->add_subcommand("run", "running a task");
 
   // this is a purely ceremonial flag(so that CLI11 won't say there is
