@@ -35,7 +35,7 @@ namespace flowhook_cli {
 
             std::string check_task_id = fs::current_path().string();
 
-          if(!active && !deactive && !depth) {
+          if(!active && !deactive && !depth && !timeout) {
               if(!fh->is_task(check_task_id)) {
                   std::cout << "FlowHook task has not been initialized in the current directory." << std::endl;
                   return;
