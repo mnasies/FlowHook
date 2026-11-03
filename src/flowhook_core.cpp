@@ -574,19 +574,22 @@ Result<void> FlowHookCore::start_active() {
 }
 
 std::vector<Task> FlowHookCore::get_tasks() const {
-    if(task_runners.empty()) {
-        auto _ts = config_manager->get_tasks();
-        if(_ts.isOk()) {
-            return _ts.unwrap();
-        } else {
-            return vector<Task>();
-        }
+  // full mode: report the live runner state
+  if (!task_runners.empty()) {
+    vector<Task> tasks;
+    for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+      tasks.push_back((*it)->get_task());
     }
-  vector<Task> tasks;
-  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
-    tasks.push_back((*it)->get_task());
+    return tasks;
   }
-  return tasks;
+  // lazy mode with a config manager: report persisted tasks
+  if (config_manager != nullptr) {
+    auto _ts = config_manager->get_tasks();
+    if (_ts.isOk())
+      return _ts.unwrap();
+    return vector<Task>();
+  }
+  return vector<Task>();
 }
 
 Result<vector<string>>
