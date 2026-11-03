@@ -192,12 +192,7 @@ Result<void> FlowHookCore::delete_task(const std::string &task_id) {
 }
 
 bool FlowHookCore::is_task(const std::string &task_id) {
-  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
-    if ((*it)->get_task_id() == task_id) {
-      return true;
-    }
-  }
-  return false;
+  return find_task(task_id).isOk();
 }
 
 Result<void> FlowHookCore::set_depth(const std::string &task_id, int depth) {
@@ -236,36 +231,18 @@ FlowHookCore::get_resolved_files(const std::string task_id) {
 }
 
 Result<int> FlowHookCore::get_task_depth(const std::string &task_id) {
-  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
-    if ((*it)->get_task_id() == task_id) {
-      auto t = (*it)->get_task();
-      return Result<int>::Ok(t.watching_depth);
-    }
-  }
-  return Result<int>::Err(FWError::make(
-      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+  auto t = TRY(find_task(task_id), int);
+  return Result<int>::Ok(t.watching_depth);
 }
 
 Result<int> FlowHookCore::get_task_timeout(const std::string &task_id) {
-  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
-    if ((*it)->get_task_id() == task_id) {
-      int t = (*it)->get_build_timeout();
-      return Result<int>::Ok(t);
-    }
-  }
-  return Result<int>::Err(FWError::make(
-      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+  auto t = TRY(find_task(task_id), int);
+  return Result<int>::Ok(t.build_timeout);
 }
 
-
 Result<bool> FlowHookCore::is_task_active(const std::string &task_id) {
-  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
-    if ((*it)->get_task_id() == task_id) {
-      return Result<bool>::Ok((*it)->is_active());
-    }
-  }
-  return Result<bool>::Err(FWError::make(
-      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+  auto t = TRY(find_task(task_id), bool);
+  return Result<bool>::Ok(t.isActive);
 }
 
 Result<void> FlowHookCore::activate_task(const std::string &task_id) {
