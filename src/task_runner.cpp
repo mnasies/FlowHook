@@ -9,6 +9,7 @@
 #include "include/error/error.h"
 #include "include/error/result.h"
 #include "include/macros.hpp"
+#include "include/identity.h"
 #include "types.h"
 #include "include/task_runner.h"
 
@@ -23,6 +24,17 @@ Result<TaskRunner *> TaskRunner::create(const string &task_name,
   return Result<TaskRunner *>::Ok(t);
 }
 
+// Builds a runner for a task whose working directory is currently missing.
+// State (commands, paths, flags) is kept so the task stays representable and
+// visible, but no watchers or log files are acquired until the directory
+// exists again.
+Result<TaskRunner *> TaskRunner::create_degraded(
+    const string &task_name, const string &working_directory) {
+  TaskRunner *t = new TaskRunner();
+  TEST_OVERLOADED(t->init_degraded(task_name, working_directory), TaskRunner *);
+  return Result<TaskRunner *>::Ok(t);
+}
+
 Result<void> TaskRunner::init(const string &task_name,
                               const string &working_directory) {
   FW_LOG("[DEBUG] Initializing task runner for " + task_name + " in " +
@@ -30,6 +42,7 @@ Result<void> TaskRunner::init(const string &task_name,
   fw = TRY(FileWatcher::create(), void);
   task.name = task_name;
   task.id = working_directory;
+  task.uuid = generate_uuid();
   flushed = false;
   task.isRunning = false;
 
@@ -50,6 +63,22 @@ Result<void> TaskRunner::init(const string &task_name,
   FW_LOG("[DEBUG] Task runner initialized. ✓");
   return Result<void>::Ok();
 }
+
+Result<void> TaskRunner::init_degraded(const string &task_name,
+                                       const string &working_directory) {
+  task.name = task_name;
+  task.id = working_directory;
+  task.uuid = generate_uuid();
+  flushed = false;
+  task.isRunning = false;
+  // fw and sl stay null: this runner only carries task state
+  FW_VERBOSE("[FLOWHOOK] Task '" + task_name +
+             "' degraded: its working directory " + working_directory +
+             " does not exist. ✓");
+  return Result<void>::Ok();
+}
+
+bool TaskRunner::is_degraded() const { return fw == nullptr; }
 
 TaskRunner::~TaskRunner() {
 
@@ -349,7 +378,8 @@ Result<void> TaskRunner::delete_path(const string &path) {
       }
     }
   }
-  TEST(fw->remove_path(path));
+  if (fw)
+    TEST(fw->remove_path(path));
   return Result<void>::Err(
       FWError::make(ErrorCode::PATH_NOT_FOUND, "Error: path not found"));
 }
@@ -536,6 +566,12 @@ Result<void> TaskRunner::delete_callback(const WatchCallback &callback) {
 
 Result<void> TaskRunner::start() {
   FW_LOG("[DEBUG] Starting TaskRunner...");
+  if (is_degraded()) {
+    return Result<void>::Err(
+        FWError::make(ErrorCode::PATH_NOT_FOUND,
+                      "Error: task is '" + task.name + "' degraded: its working directory " +
+                          task.id + " does not exist ✗ \n // cd into that task's renamed directory and run flowhook check to re-anchor it."));
+  }
   if (task.isRunning) {
     return Result<void>::Ok(); // idempotent
   }
@@ -557,6 +593,8 @@ Result<void> TaskRunner::start() {
 }
 
 Result<vector<string>> TaskRunner::get_watch_list() {
+  if (is_degraded())
+    return Result<vector<string>>::Ok(vector<string>());
   return fw->get_watch_list();
 }
 

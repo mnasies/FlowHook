@@ -16,7 +16,7 @@ namespace flowhook
     {
     private:
         FileWatcher *fw = nullptr;
-        SessionLogger *sl;
+        SessionLogger *sl = nullptr;
         Task task;
         std::vector<WatchCallback> callbacks;
 
@@ -30,10 +30,13 @@ namespace flowhook
 
         TaskRunner() = default;
         Result<void> init(const std::string &task_name, const std::string &working_directory);
+        Result<void> init_degraded(const std::string &task_name, const std::string &working_directory);
         Result<void> add_path_internal(const std::string &path, int MAX_DEPTH, int CURRENT_DEPTH);
         bool check_path_existence(const std::string &path);
     public:
         static Result<TaskRunner*> create(const std::string &task_name, const std::string &working_directory);
+        static Result<TaskRunner*> create_degraded(const std::string &task_name, const std::string &working_directory);
+        bool is_degraded() const;
         ~TaskRunner();
 
         std::string get_task_name() const { return task.name; }
