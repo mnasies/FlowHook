@@ -1,6 +1,7 @@
 #include "../../src/include/flowhook_core.h"
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
+#include "../include/cli_utils.h"
 
 #include <climits>
 
@@ -8,8 +9,9 @@
 namespace fs = std::filesystem;
 
 namespace flowhook_cli {
-    void register_set(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_set(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
+
         auto* set = app->add_subcommand("set", "setting a property for the task");
 
         // this is a purely ceremonial flag(so that CLI11 won't say there is unrecognized flag)
@@ -30,8 +32,13 @@ namespace flowhook_cli {
         static int depth = INT_MIN;
         set->add_option("--depth", depth, "Set the depth to watch from your working directory.");
 
-        set->callback([=]() mutable {
-          std::string set_task_id = fs::current_path().string();
+        set->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::create();
+            fh = handle_fh_error(_fh);
+            if (fh == nullptr)
+                return;
+
+            std::string set_task_id = fs::current_path().string();
 
           if (active) {
             auto r = fh->activate_task(set_task_id);

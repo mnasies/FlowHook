@@ -2,13 +2,14 @@
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
 #include "../../src/include/types.h"
+#include "../include/cli_utils.h"
 
 #include <vector>
 
 
 namespace fs = std::filesystem;
 namespace flowhook_cli {
-    void register_list(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_list(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
         auto* list = app->add_subcommand("list", "listing all tasks, paths, commands, and ignored patterns");
 
@@ -33,12 +34,17 @@ namespace flowhook_cli {
         list->add_flag("--on-success", list_on_success, "List all on success commands to run in the current directory.");
         list->add_flag("--on-failure", list_on_failure, "List all on failure commands to run in the current directory.");
 
-        list->callback([=]() mutable {
+        list->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::lazy_create();
+            fh = handle_fh_error(_fh);
+            if (fh == nullptr)
+                return;
+
             list_task_id = fs::current_path().string();
             std::vector<flowhook::Task> tasks = fh->get_tasks();
             flowhook::Task* ts = nullptr;
             for(auto& task : tasks) {
-                if(task.id == list_task_id) {
+                if(task.working_dir == list_task_id) {
                     ts = &task;
                     break;
                 }
@@ -49,7 +55,7 @@ namespace flowhook_cli {
                 std::cout << "\nAll registered Tasks:\n" << std::endl;
                 for (const auto& task : tasks) {
                     std::cout << " Name: " << task.name << std::endl;
-                    std::cout << " Working Directory: " << task.id << "\n" << std::endl;
+                    std::cout << " Working Directory: " << task.working_dir << "\n" << std::endl;
                 }
             }
 
@@ -71,7 +77,7 @@ namespace flowhook_cli {
                 }
 
                 std::cout << "All Currently Watched Files:\n" << std::endl;
-                for(const auto& path : fh->get_resolved_files(ts->id)) {
+                for(const auto& path : fh->get_resolved_files(ts->working_dir)) {
                     std::cout << " " << path << std::endl;
                 }
 

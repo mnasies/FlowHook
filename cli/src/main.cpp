@@ -2,7 +2,6 @@
 #include "./include/CLI11.hpp"
 #include <iostream>
 #include <unistd.h>
-#include <filesystem>
 #include <cstdlib>
 #include <csignal>
 
@@ -11,16 +10,15 @@
 #include "version.h"
 
 namespace flowhook_cli {
-    void register_add(CLI::App*, flowhook::FlowHookCore*);
-    void register_run(CLI::App*, flowhook::FlowHookCore*);
-    void register_init(CLI::App*, flowhook::FlowHookCore*);
-    void register_list(CLI::App*, flowhook::FlowHookCore*);
-    void register_remove(CLI::App*, flowhook::FlowHookCore*);
-    void register_set(CLI::App*, flowhook::FlowHookCore*);
-    void register_check(CLI::App*, flowhook::FlowHookCore*);
+    void register_add(CLI::App*, flowhook::FlowHookCore*&);
+    void register_run(CLI::App*, flowhook::FlowHookCore*&);
+    void register_init(CLI::App*, flowhook::FlowHookCore*&);
+    void register_list(CLI::App*, flowhook::FlowHookCore*&);
+    void register_remove(CLI::App*, flowhook::FlowHookCore*&);
+    void register_set(CLI::App*, flowhook::FlowHookCore*&);
+    void register_check(CLI::App*, flowhook::FlowHookCore*&);
 }
 
-namespace fs = std::filesystem;
 using namespace flowhook;
 bool FLOWHOOK_VERBOSE = false;
 bool FLOWHOOK_DEBUG = false;
@@ -33,32 +31,6 @@ void handle_sigint(int)
     if(fh) fh->stop_all();
     std::cout << "Exiting safely..." << std::endl;
     exit(0);
-}
-
-fs::path get_home_directory() {
-#if defined(_WIN32) || defined(_WIN64)
-    // Windows environment
-    const char* userProfile = std::getenv("USERPROFILE");
-    if (userProfile) {
-        return fs::path(userProfile);
-    }
-
-    // Fallback for older Windows environments
-    const char* homeDrive = std::getenv("HOMEDRIVE");
-    const char* homePath = std::getenv("HOMEPATH");
-    if (homeDrive && homePath) {
-        return fs::path(homeDrive) / homePath;
-    }
-#else
-    // Linux, WSL, macOS, and other UNIX-like systems
-    const char* home = std::getenv("HOME");
-    if (home) {
-        return fs::path(home);
-    }
-#endif
-
-    // Return an empty path if nothing was found
-    return fs::path();
 }
 
 int main(int argc, char **argv) {
@@ -83,41 +55,6 @@ int main(int argc, char **argv) {
           return 0;
       }
   }
-
-  auto _fh = FlowHookCore::create();
-  if (_fh.isErr()) {
-      if(_fh.getErrCode() == ErrorCode::CONFIG_PARSE_FAILED)
-      {
-          std::cerr << "Config file is corrupted." << std::endl;
-          fs::path config_path = get_home_directory() / ".config" / "flowhook"/ "config.json";
-          std::cout << "Path : " << config_path << std::endl;
-          std::cerr << "Options: " << std::endl;
-          std::cout << " [1] clear all data and start fresh" << std::endl;
-          std::cout << " [2] exit and fix manually" << std::endl;
-
-          std::cout << "Enter your choice: ";
-          int choice;
-          std::cin >> choice;
-          if (choice == 1)
-          {
-              fs::remove(config_path);
-              std::cout << "Config file cleared. Starting fresh..." << std::endl;
-              return 0;
-          }
-          else if (choice == 2)
-              return 1;
-          else
-              std::cerr << "Invalid choice." << std::endl;
-          return 1;
-      }
-      else
-      {
-          std::cerr << "Failed to create FlowHook instance: " << _fh.getErrMessage()
-              << std::endl;
-          return 1;
-      }
-  }
-  fh = _fh.unwrap();
 
   CLI::App app{"FlowHook"};
   app.require_subcommand(0, 1);

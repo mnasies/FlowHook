@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <filesystem>
 
 
@@ -327,6 +326,23 @@ UTEST_F(FlowHookFixture, start_all_multiple_tasks)
     EXPECT_TRUE(utest_fixture->fh->start_all().isOk());
     utest_fixture->fh->stop_all().isOk(); // Clean up
 }
+UTEST_F(FlowHookFixture, start_all_skips_degraded_task)
+{
+    ASSERT_TRUE(utest_fixture->fh->create_task("test_task_1", "/tmp/fh_test").isOk());
+    ASSERT_TRUE(utest_fixture->fh->create_task("test_task_2", "/tmp/fh_test2").isOk());
+
+    delete utest_fixture->fh;
+    fs::remove_all("/tmp/fh_test2");
+
+    auto f = FlowHookCore::create();
+    ASSERT_TRUE(f.isOk());
+    utest_fixture->fh = f.unwrap();
+
+    EXPECT_TRUE(utest_fixture->fh->start_all().isOk());
+    utest_fixture->fh->stop_all().isOk();
+
+    fs::create_directories("/tmp/fh_test2");
+}
 UTEST_F(FlowHookFixture, stop_all_no_tasks)
 {
     EXPECT_TRUE(utest_fixture->fh->stop_all().isErr());
@@ -405,8 +421,8 @@ UTEST_F(FlowHookFixture, get_tasks_multiple_tasks)
     std::vector<Task> tasks = utest_fixture->fh->get_tasks();
     EXPECT_EQ(tasks.size(), 2);
     // Tasks should be in the order they were created or added to task_runners
-    EXPECT_EQ(tasks[0].id, "/tmp/fh_test");
-    EXPECT_EQ(tasks[1].id, "/tmp/fh_test2");
+    EXPECT_EQ(tasks[0].working_dir, "/tmp/fh_test");
+    EXPECT_EQ(tasks[1].working_dir, "/tmp/fh_test2");
 }
 
 UTEST_F(FlowHookFixture, get_tasks_after_deletion)
@@ -416,7 +432,7 @@ UTEST_F(FlowHookFixture, get_tasks_after_deletion)
     ASSERT_TRUE(utest_fixture->fh->delete_task("/tmp/fh_test2").isOk());
     std::vector<Task> tasks = utest_fixture->fh->get_tasks();
     EXPECT_EQ(tasks.size(), 1);
-    EXPECT_EQ(tasks[0].id, "/tmp/fh_test");
+    EXPECT_EQ(tasks[0].working_dir, "/tmp/fh_test");
 }
 
 

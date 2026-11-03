@@ -435,4 +435,86 @@ UTEST_F(TaskRunnerFixture, stop_without_start)
     EXPECT_TRUE(utest_fixture->tr->stop().isOk()); // idempotent
 }
 
+// ---------------------------------------------------------------------------
+// Degraded runners + uuid
+// ---------------------------------------------------------------------------
+
+UTEST_F(TaskRunnerFixture, create_stamps_uuid)
+{
+    std::string uuid = utest_fixture->tr->get_task().uuid; // keep alive: get_task returns a temporary
+    EXPECT_TRUE(!uuid.empty());
+}
+
+UTEST_F(TaskRunnerFixture, uuid_unique_across_runners)
+{
+    auto r = TaskRunner::create("tr_test", "/tmp/tr_test2");
+    ASSERT_TRUE(r.isOk());
+    TaskRunner *other = r.unwrap();
+    // copy first: get_task() returns a temporary and .c_str() would dangle
+    std::string a = utest_fixture->tr->get_task().uuid;
+    std::string b = other->get_task().uuid;
+    EXPECT_STRNE(a.c_str(), b.c_str());
+    delete other;
+}
+
+UTEST_F(TaskRunnerFixture, create_degraded_missing_dir)
+{
+    auto r = TaskRunner::create_degraded("ghost", "/tmp/tr_test/nonexistent");
+    ASSERT_TRUE(r.isOk());
+    TaskRunner *degraded = r.unwrap();
+
+    // state-only: holds the task data, holds no watchers
+    EXPECT_TRUE(degraded->is_degraded());
+    EXPECT_EQ(degraded->get_task_id(), "/tmp/tr_test/nonexistent");
+    EXPECT_EQ(degraded->get_task_name(), "ghost");
+    std::string uuid = degraded->get_task().uuid;
+    EXPECT_TRUE(!uuid.empty());
+    delete degraded;
+}
+
+UTEST_F(TaskRunnerFixture, degraded_start_fails_cleanly)
+{
+    auto r = TaskRunner::create_degraded("ghost", "/tmp/tr_test/nonexistent");
+    ASSERT_TRUE(r.isOk());
+    TaskRunner *degraded = r.unwrap();
+
+    auto s = degraded->start();
+    EXPECT_TRUE(s.isErr());
+    EXPECT_EQ(s.getErrCode(), ErrorCode::PATH_NOT_FOUND);
+    EXPECT_FALSE(degraded->is_running());
+    delete degraded;
+}
+
+UTEST_F(TaskRunnerFixture, degraded_get_watch_list_is_empty)
+{
+    auto r = TaskRunner::create_degraded("ghost", "/tmp/tr_test/nonexistent");
+    ASSERT_TRUE(r.isOk());
+    TaskRunner *degraded = r.unwrap();
+
+    auto w = degraded->get_watch_list();
+    ASSERT_TRUE(w.isOk());
+    EXPECT_TRUE(w.unwrap().empty());
+    delete degraded;
+}
+
+UTEST_F(TaskRunnerFixture, degraded_delete_path_does_not_crash)
+{
+    auto r = TaskRunner::create_degraded("ghost", "/tmp/tr_test/nonexistent");
+    ASSERT_TRUE(r.isOk());
+    TaskRunner *degraded = r.unwrap();
+
+    // fw is null on degraded runners; the lookup must fail cleanly
+    EXPECT_TRUE(degraded->delete_path("/tmp/tr_test/nonexistent").isErr());
+    delete degraded;
+}
+
+UTEST_F(TaskRunnerFixture, degraded_not_running_by_default)
+{
+    auto r = TaskRunner::create_degraded("ghost", "/tmp/tr_test/nonexistent");
+    ASSERT_TRUE(r.isOk());
+    TaskRunner *degraded = r.unwrap();
+    EXPECT_FALSE(degraded->is_running());
+    delete degraded;
+}
+
 UTEST_MAIN()

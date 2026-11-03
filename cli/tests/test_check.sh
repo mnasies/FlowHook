@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+PASS=0
+FAIL=0
+
+source ./test_helpers.sh
+
+# test_check.sh
+
+test_check_reports_initialized() {
+  fresh_dir
+  flowhook init >/dev/null 2>&1
+  local out code
+  out=$(flowhook check 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check in initialized dir exits 0"
+  assert_contains "$out" "is initialized" "check reports initialized after init"
+}
+
+test_check_reports_not_initialized() {
+  fresh_dir
+  local out code
+  out=$(flowhook check 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check in uninitialized dir exits 0"
+  assert_contains "$out" "has not been initialized" "check reports not initialized without init"
+}
+
+# regression: an initialized task in dir A must still check fine when ANOTHER
+# task's working dir gets renamed (lazy mode must not hard-fail on the
+# renamed neighbor)
+test_check_survives_renamed_neighbor_dir() {
+  fresh_dir
+  flowhook init >/dev/null 2>&1
+  local dir_a
+  dir_a=$(pwd)
+  local neighbor="$dir_a/../neighbor"
+  local neighbor_renamed="$dir_a/../neighbor_renamed"
+  rm -rf "$neighbor" "$neighbor_renamed"
+  mkdir -p "$neighbor"
+  cd "$neighbor" || exit 1
+  flowhook init >/dev/null 2>&1
+  # now move the neighbor's directory out from under it, dir A untouched
+  mv "$neighbor" "$neighbor_renamed"
+  cd "$dir_a" || exit 1
+  local out code
+  out=$(flowhook check 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check exits 0 with renamed neighbor dir"
+  assert_contains "$out" "is initialized" "check still reports initialized with renamed neighbor"
+  rm -rf "$neighbor_renamed"
+}
+
+# read-only values must be served from config in lazy mode
+test_check_depth_and_timeout_from_config() {
+  fresh_dir
+  flowhook init >/dev/null 2>&1
+  flowhook set --depth 3 --timeout 42 >/dev/null 2>&1
+  local out code
+  out=$(flowhook check --depth 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check --depth exits 0"
+  assert_contains "$out" "3" "check --depth reports persisted depth"
+  out=$(flowhook check --timeout 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check --timeout exits 0"
+  assert_contains "$out" "42" "check --timeout reports persisted timeout"
+}
+
+test_check_active_after_set_active() {
+  fresh_dir
+  flowhook init >/dev/null 2>&1
+  flowhook set --active >/dev/null 2>&1
+  local out code
+  out=$(flowhook check --active 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check --active exits 0"
+  assert_contains "$out" "is active" "check --active reports persisted active flag"
+}
+
+# a corrupted config must not crash any command; every command should print a
+# message and exit cleanly (never segfault)
+test_corrupted_config_does_not_segfault() {
+  fresh_dir
+  echo "{ corrupted" > "$FLOWHOOK_CONFIG_DIR_TEST"/config.json
+  local code
+  flowhook list </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: list segfaults on corrupted config"; }
+  flowhook check </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: check segfaults on corrupted config"; }
+  flowhook init </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: init segfaults on corrupted config"; }
+  flowhook add --command "echo hi" </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: add segfaults on corrupted config"; }
+  flowhook set --active </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: set segfaults on corrupted config"; }
+  flowhook remove </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: remove segfaults on corrupted config"; }
+  # run also starts a SIGINT-driven watcher loop when it succeeds; with a null
+  # core it must return before pausing
+  flowhook run </dev/null >/dev/null 2>&1 & local run_pid=$!
+  sleep 1
+  kill -s INT "$run_pid" 2>/dev/null || true
+  wait "$run_pid"; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: run segfaults on corrupted config"; }
+}
+
+test_check_reanchors_renamed_dir() {
+  fresh_dir
+  mkdir project
+  cd project || exit 1
+  flowhook init >/dev/null 2>&1
+  local old_dir
+  old_dir=$(pwd)
+  local new_dir="${old_dir}_renamed"
+  cd .. || exit 1
+  mv "$old_dir" "$new_dir"
+  cd "$new_dir" || exit 1
+
+  # Running check in the renamed directory should re-anchor the task
+  local out code
+  out=$(flowhook check 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check in renamed dir exits 0"
+  assert_contains "$out" "is initialized" "check reports initialized after re-anchoring"
+
+  # Verify config updated: list --tasks shows new path, not old
+  local list_out
+  list_out=$(flowhook list --tasks 2>&1)
+  assert_contains "$list_out" "$new_dir" "list --tasks reflects re-anchored working directory"
+  rm -rf "$new_dir"
+}
+
+test_check_refuses_corrupted_marker() {
+  fresh_dir
+  mkdir project
+  cd project || exit 1
+  flowhook init >/dev/null 2>&1
+  local old_dir
+  old_dir=$(pwd)
+  local new_dir="${old_dir}_corrupt"
+  cd .. || exit 1
+  mv "$old_dir" "$new_dir"
+  cd "$new_dir" || exit 1
+  echo "bad json" > .flowhook
+
+  local out code
+  out=$(flowhook check 2>&1)
+  code=$?
+  assert_exit 0 "$code" "check with corrupted marker exits 0"
+  assert_contains "$out" "has not been initialized" "check refuses corrupted marker"
+  rm -rf "$new_dir"
+}
+
+
