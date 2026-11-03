@@ -6,6 +6,7 @@ PASS=0
 FAIL=0
 
 source ./test_add.sh
+source ./test_check.sh
 source ./test_init.sh
 source ./test_list.sh
 source ./test_run.sh
@@ -43,6 +44,14 @@ test_list_tasks_works_without_init_in_cwd
 test_list_paths_fails_without_init_in_cwd
 test_list_ignored_shows_defaults
 test_list_combined_flags_when_initialized
+
+# -- TEST CHECK --
+
+test_check_reports_initialized
+test_check_reports_not_initialized
+test_check_survives_renamed_neighbor_dir
+test_check_depth_and_timeout_from_config
+test_check_active_after_set_active
 
 # -- TEST RUN --
 
