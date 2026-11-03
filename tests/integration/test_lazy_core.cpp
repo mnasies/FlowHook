@@ -1,10 +1,9 @@
-#include <cstdlib>
 #include <filesystem>
+#include <fstream>
 
 
 #include "../../src/include/flowhook_core.h"
 #include "../utest.h"
-#include "../../src/include/types.h"
 
 using namespace std;
 using namespace flowhook;
@@ -62,7 +61,7 @@ UTEST_F_TEARDOWN(LazyFixture)
 // LAZY CREATION
 // ---------------------------------------------------------------------------------
 
-// renamed neighbor working dirs must not break lazy init (issue #15/#16)
+// renamed neighbor working dirs must not break lazy init
 UTEST_F(LazyFixture, lazy_create_survives_renamed_task_dir)
 {
     fs::rename("/tmp/fh_test2", "/tmp/fh_test2_renamed");
@@ -144,6 +143,50 @@ UTEST_F(LazyFixture, get_tasks_lists_persisted_tasks)
     EXPECT_EQ(tasks.size(), 2);
     EXPECT_EQ(tasks[0].id, "/tmp/fh_test");
     EXPECT_EQ(tasks[1].id, "/tmp/fh_test2");
+}
+
+UTEST_F(LazyFixture, reanchor_on_is_task_when_dir_renamed)
+{
+    fs::rename("/tmp/fh_test2", "/tmp/fh_test2_renamed");
+
+    // Before re-anchoring, old path was registered. Now check on the new path
+    // must detect the marker, re-anchor the task, and return true.
+    EXPECT_TRUE(utest_fixture->fh->is_task("/tmp/fh_test2_renamed"));
+
+    // Config must now reflect the new working directory
+    auto r = utest_fixture->fh->is_task_active("/tmp/fh_test2_renamed");
+    ASSERT_TRUE(r.isOk());
+    EXPECT_TRUE(r.unwrap());
+
+    // Old working directory is no longer registered
+    EXPECT_FALSE(utest_fixture->fh->is_task("/tmp/fh_test2"));
+
+    // Clean up
+    fs::rename("/tmp/fh_test2_renamed", "/tmp/fh_test2");
+}
+
+UTEST_F(LazyFixture, reanchor_refused_if_original_dir_still_exists)
+{
+    fs::create_directories("/tmp/fh_duplicate");
+    std::error_code ec;
+    fs::copy_file("/tmp/fh_test/.flowhook", "/tmp/fh_duplicate/.flowhook", ec);
+    ASSERT_FALSE(ec);
+
+    // /tmp/fh_test still exists on disk, so re-anchoring must NOT adopt /tmp/fh_duplicate
+    EXPECT_FALSE(utest_fixture->fh->is_task("/tmp/fh_duplicate"));
+
+    fs::remove_all("/tmp/fh_duplicate");
+}
+
+UTEST_F(LazyFixture, reanchor_refused_if_marker_corrupted)
+{
+    fs::rename("/tmp/fh_test2", "/tmp/fh_test2_corrupt");
+    std::ofstream("/tmp/fh_test2_corrupt/.flowhook") << "not valid json";
+
+    EXPECT_FALSE(utest_fixture->fh->is_task("/tmp/fh_test2_corrupt"));
+
+    fs::remove_all("/tmp/fh_test2_corrupt");
+    fs::create_directories("/tmp/fh_test2");
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////

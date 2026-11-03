@@ -244,7 +244,10 @@ namespace flowhook
         for (auto it = config_obj["tasks"].begin(); it != config_obj["tasks"].end(); it++)
         {
             string id = it->at("working_directory");
-            if (id == task.id)
+            // uuid match lets a task whose directory moved away be updated
+            // in place (re-anchoring); the persisted uuid never changes
+            string uuid = it->value("uuid", "");
+            if (id == task.id || (!task.uuid.empty() && uuid == task.uuid))
             {
                 json _json_task = TRY(convert_task_to_json(task), void);
                 *it = _json_task;
@@ -283,9 +286,12 @@ namespace flowhook
         for (auto it = config_obj["tasks"].begin(); it != config_obj["tasks"].end(); it++)
         {
             string id = it->at("working_directory");
-            if (id == task.id)
+            string uuid = it->value("uuid", "");
+            if (id == task.id || (!task.uuid.empty() && uuid == task.uuid))
             {
                 config_obj["tasks"].erase(it);
+                isflushed = false;
+                flush();
                 return Result<void>::Ok();
             }
         }

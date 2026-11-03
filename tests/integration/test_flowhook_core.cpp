@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <filesystem>
 
 
@@ -326,6 +325,23 @@ UTEST_F(FlowHookFixture, start_all_multiple_tasks)
     ASSERT_TRUE(utest_fixture->fh->create_task("test_task_2", "/tmp/fh_test2").isOk());
     EXPECT_TRUE(utest_fixture->fh->start_all().isOk());
     utest_fixture->fh->stop_all().isOk(); // Clean up
+}
+UTEST_F(FlowHookFixture, start_all_skips_degraded_task)
+{
+    ASSERT_TRUE(utest_fixture->fh->create_task("test_task_1", "/tmp/fh_test").isOk());
+    ASSERT_TRUE(utest_fixture->fh->create_task("test_task_2", "/tmp/fh_test2").isOk());
+
+    delete utest_fixture->fh;
+    fs::remove_all("/tmp/fh_test2");
+
+    auto f = FlowHookCore::create();
+    ASSERT_TRUE(f.isOk());
+    utest_fixture->fh = f.unwrap();
+
+    EXPECT_TRUE(utest_fixture->fh->start_all().isOk());
+    utest_fixture->fh->stop_all().isOk();
+
+    fs::create_directories("/tmp/fh_test2");
 }
 UTEST_F(FlowHookFixture, stop_all_no_tasks)
 {

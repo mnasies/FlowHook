@@ -65,6 +65,45 @@ Result<Task> FlowHookCore::find_task(const std::string &task_id) {
     for (auto &t : _ts)
       if (t.id == task_id)
         return Result<Task>::Ok(t);
+
+    // Re-anchor fallback: if the caller's path isn't known to config, but
+    // carries a valid .flowhook marker whose uuid matches an existing task
+    // whose old directory is missing on disk, this is a renamed directory.
+    // Update the config in place and return the re-anchored task.
+    auto marker = read_marker(task_id);
+    if (marker.isOk()) {
+      Identity iden = marker.unwrap();
+      if (!iden.uuid.empty()) {
+        for (auto &t : _ts) {
+          if (t.uuid == iden.uuid && !t.uuid.empty() && !fs::exists(t.id)) {
+            FW_VERBOSE("[FLOWHOOK] Re-anchoring task '" + t.name + "': " +
+                       t.id + " -> " + task_id);
+            std::string old_id = t.id;
+            Task reanchored = t;
+            reanchored.id = task_id;
+            for (auto &dp : reanchored.dir_paths) {
+              if (dp.rfind(old_id, 0) == 0) {
+                dp = task_id + dp.substr(old_id.size());
+              }
+            }
+            for (auto &fp : reanchored.file_paths) {
+              if (fp.rfind(old_id, 0) == 0) {
+                fp = task_id + fp.substr(old_id.size());
+              }
+            }
+            auto u = config_manager->update_task(reanchored);
+            if (u.isOk()) {
+              for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+                if ((*it)->get_task().uuid == iden.uuid) {
+                  (*it)->change_working_directory(task_id);
+                }
+              }
+              return Result<Task>::Ok(reanchored);
+            }
+          }
+        }
+      }
+    }
   }
 
   return Result<Task>::Err(FWError::make(
@@ -74,6 +113,8 @@ Result<Task> FlowHookCore::find_task(const std::string &task_id) {
 // Mirrors TaskRunner::isIgnored for tasks that have no live runner.
 bool FlowHookCore::is_lazy_ignored(const Task &task, const std::string &path) {
   string filename = fs::path(path).filename().string();
+  if (filename == MARKER_FILE_NAME)
+    return true;
   for (auto &p : task.ignored_paths)
     if (p == path || p == filename)
       return true;
@@ -251,6 +292,19 @@ Result<void> FlowHookCore::create_task(const std::string &task_name,
     }
   }
 
+  auto existing_marker = read_marker(task_id);
+  if (existing_marker.isOk()) {
+    std::string m_uuid = existing_marker.unwrap().uuid;
+    for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+      if ((*it) == nullptr)
+        continue;
+      if (!m_uuid.empty() && (*it)->get_task().uuid == m_uuid) {
+        return Result<void>::Err(FWError::make(ErrorCode::DUPLICATE_ENTRY,
+                                               "Error: task already exists ✗"));
+      }
+    }
+  }
+
   if (!fs::exists(task_id) || !fs::is_directory(task_id)) {
     return Result<void>::Err(FWError::make(
         ErrorCode::PATH_NOT_FOUND, "Error: working directory not found ✗"));
@@ -280,12 +334,20 @@ Result<void> FlowHookCore::create_task(const std::string &task_name,
 
 Result<void> FlowHookCore::delete_task(const std::string &task_id) {
   FW_LOG("[DEBUG] Deleting task...");
+  std::string marker_uuid;
+  auto marker = read_marker(task_id);
+  if (marker.isOk()) {
+    marker_uuid = marker.unwrap().uuid;
+  }
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     string name = (*it)->get_task_id();
-    if (name == task_id) {
+    if (name == task_id || (!marker_uuid.empty() && (*it)->get_task().uuid == marker_uuid)) {
       Task _task_to_be_deleted = (*it)->get_task();
       TEST(config_manager->delete_task(_task_to_be_deleted));
       TEST(delete_marker(task_id));
+      if (_task_to_be_deleted.id != task_id) {
+        delete_marker(_task_to_be_deleted.id);
+      }
       task_runners.erase(it);
       FW_VERBOSE("[FLOWHOOK] Task deleted: " + task_id + "' ✓");
       return Result<void>::Ok();

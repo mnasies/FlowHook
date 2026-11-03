@@ -16,9 +16,10 @@ std::string marker_path(const std::string &dir) {
 std::string generate_uuid() {
     const char *hex = "0123456789abcdef";
     std::random_device rd;
-    // seed a mt engine with 64 bits of device entropy; sufficient for
-    // task identity tokens which never need cryptographic guarantees
-    std::mt19937_64 rng(rd());
+    // seed with multiple device words; a single-word seed repeats when the
+    // platform falls back to a deterministic random_device implementation
+    std::seed_seq seed64{rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd()};
+    std::mt19937_64 rng(seed64);
     unsigned char bytes[16];
     for (auto &b : bytes)
         b = static_cast<unsigned char>(rng() & 0xff);
