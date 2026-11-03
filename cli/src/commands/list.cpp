@@ -44,7 +44,7 @@ namespace flowhook_cli {
             std::vector<flowhook::Task> tasks = fh->get_tasks();
             flowhook::Task* ts = nullptr;
             for(auto& task : tasks) {
-                if(task.id == list_task_id) {
+                if(task.working_dir == list_task_id) {
                     ts = &task;
                     break;
                 }
@@ -55,7 +55,7 @@ namespace flowhook_cli {
                 std::cout << "\nAll registered Tasks:\n" << std::endl;
                 for (const auto& task : tasks) {
                     std::cout << " Name: " << task.name << std::endl;
-                    std::cout << " Working Directory: " << task.id << "\n" << std::endl;
+                    std::cout << " Working Directory: " << task.working_dir << "\n" << std::endl;
                 }
             }
 
@@ -77,7 +77,7 @@ namespace flowhook_cli {
                 }
 
                 std::cout << "All Currently Watched Files:\n" << std::endl;
-                for(const auto& path : fh->get_resolved_files(ts->id)) {
+                for(const auto& path : fh->get_resolved_files(ts->working_dir)) {
                     std::cout << " " << path << std::endl;
                 }
 

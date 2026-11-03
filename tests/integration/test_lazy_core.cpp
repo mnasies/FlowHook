@@ -141,8 +141,8 @@ UTEST_F(LazyFixture, get_tasks_lists_persisted_tasks)
 {
     auto tasks = utest_fixture->fh->get_tasks();
     EXPECT_EQ(tasks.size(), 2);
-    EXPECT_EQ(tasks[0].id, "/tmp/fh_test");
-    EXPECT_EQ(tasks[1].id, "/tmp/fh_test2");
+    EXPECT_EQ(tasks[0].working_dir, "/tmp/fh_test");
+    EXPECT_EQ(tasks[1].working_dir, "/tmp/fh_test2");
 }
 
 UTEST_F(LazyFixture, reanchor_on_is_task_when_dir_renamed)

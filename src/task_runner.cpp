@@ -41,7 +41,7 @@ Result<void> TaskRunner::init(const string &task_name,
          working_directory + " ...✗");
   fw = TRY(FileWatcher::create(), void);
   task.name = task_name;
-  task.id = working_directory;
+  task.working_dir = working_directory;
   task.uuid = generate_uuid();
   flushed = false;
   task.isRunning = false;
@@ -67,7 +67,7 @@ Result<void> TaskRunner::init(const string &task_name,
 Result<void> TaskRunner::init_degraded(const string &task_name,
                                        const string &working_directory) {
   task.name = task_name;
-  task.id = working_directory;
+  task.working_dir = working_directory;
   task.uuid = generate_uuid();
   flushed = false;
   task.isRunning = false;
@@ -147,12 +147,12 @@ TaskRunner::change_working_directory(const string &working_directory) {
         ErrorCode::PATH_NOT_FOUND, "Error: working directory not found ✗"));
   }
   // check if working directory already exists
-  if (task.id == working_directory) {
+  if (task.working_dir == working_directory) {
     return Result<void>::Err(
         FWError::make(ErrorCode::PATH_ALREADY_EXISTS,
                       "Error: working directory already exists ✗"));
   }
-  task.id = working_directory;
+  task.working_dir = working_directory;
   FW_LOG("[DEBUG] Working directory changed successfully. ✓");
   return Result<void>::Ok();
 }
@@ -468,7 +468,7 @@ Result<void> TaskRunner::execute(const WatchEvent &e) {
     FW_LOG("[DEBUG] Executing command through pipes ....");
     int timeout = task.build_timeout;
     string secure_execution_chain =
-        "cd " + task.id + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd + " 2>&1";
+        "cd " + task.working_dir + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd + " 2>&1";
     FILE *fp = popen(secure_execution_chain.c_str(), "r");
     if (fp == NULL) {
       return Result<void>::Err(
@@ -513,7 +513,7 @@ Result<void> TaskRunner::execute(const WatchEvent &e) {
         FW_LOG("[DEBUG] Executing failure commands...");
         int timeout = task.build_timeout;
         string exec_chain =
-            "cd " + task.id + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd_i;
+            "cd " + task.working_dir + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd_i;
         system(exec_chain.c_str());
       }
     } else {
@@ -521,7 +521,7 @@ Result<void> TaskRunner::execute(const WatchEvent &e) {
         FW_LOG("[DEBUG] Executing success commands...");
         int timeout = task.build_timeout;
         string exec_chain =
-            "cd " + task.id + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd_i;
+            "cd " + task.working_dir + " && " + (timeout > 0 ? "timeout " + std::to_string(timeout) + "s " : "") + cmd_i;
         system(exec_chain.c_str());
       }
     }
@@ -573,7 +573,7 @@ Result<void> TaskRunner::start() {
     return Result<void>::Err(
         FWError::make(ErrorCode::PATH_NOT_FOUND,
                       "Error: task is '" + task.name + "' degraded: its working directory " +
-                          task.id + " does not exist ✗ \n // cd into that task's renamed directory and run flowhook check to re-anchor it."));
+                          task.working_dir + " does not exist ✗ \n // cd into that task's renamed directory and run flowhook check to re-anchor it."));
   }
   if (task.isRunning) {
     return Result<void>::Ok(); // idempotent

@@ -128,7 +128,7 @@ UTEST_F(ConfigManagerFixture, uuid_round_trip)
 // old configs written before uuid existed whose dir is missing load with empty uuid
 UTEST_F(ConfigManagerFixture, legacy_config_missing_uuid)
 {
-    utest_fixture->t->id = "/tmp/cm_legacy_missing";
+    utest_fixture->t->working_dir = "/tmp/cm_legacy_missing";
     utest_fixture->t->uuid.clear();
     ASSERT_TRUE(utest_fixture->cm->log_task(*utest_fixture->t).isOk());
     // strip uuid key from the config json to simulate a legacy file

@@ -421,8 +421,8 @@ UTEST_F(FlowHookFixture, get_tasks_multiple_tasks)
     std::vector<Task> tasks = utest_fixture->fh->get_tasks();
     EXPECT_EQ(tasks.size(), 2);
     // Tasks should be in the order they were created or added to task_runners
-    EXPECT_EQ(tasks[0].id, "/tmp/fh_test");
-    EXPECT_EQ(tasks[1].id, "/tmp/fh_test2");
+    EXPECT_EQ(tasks[0].working_dir, "/tmp/fh_test");
+    EXPECT_EQ(tasks[1].working_dir, "/tmp/fh_test2");
 }
 
 UTEST_F(FlowHookFixture, get_tasks_after_deletion)
@@ -432,7 +432,7 @@ UTEST_F(FlowHookFixture, get_tasks_after_deletion)
     ASSERT_TRUE(utest_fixture->fh->delete_task("/tmp/fh_test2").isOk());
     std::vector<Task> tasks = utest_fixture->fh->get_tasks();
     EXPECT_EQ(tasks.size(), 1);
-    EXPECT_EQ(tasks[0].id, "/tmp/fh_test");
+    EXPECT_EQ(tasks[0].working_dir, "/tmp/fh_test");
 }
 
 

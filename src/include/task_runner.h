@@ -40,7 +40,7 @@ namespace flowhook
         ~TaskRunner();
 
         std::string get_task_name() const { return task.name; }
-        std::string get_task_id() const { return task.id; }
+        std::string get_task_id() const { return task.working_dir; }
         Task get_task() const { return task; }
         std::vector<std::string> get_resolved_files() const { return resolved_files; }
         int get_build_timeout() const { return task.build_timeout; }

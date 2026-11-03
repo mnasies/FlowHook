@@ -172,7 +172,7 @@ namespace flowhook
     {
         Task _task;
         _task.name = json_task.at("task_name");
-        _task.id = json_task.at("working_directory");
+        _task.working_dir = json_task.at("working_directory");
         // uuid may be absent in configs written before identity markers existed
         _task.uuid = json_task.value("uuid", "");
 
@@ -235,7 +235,7 @@ namespace flowhook
     {
         json _json_task = json::object();
         _json_task["task_name"] = task.name;
-        _json_task["working_directory"] = task.id;
+        _json_task["working_directory"] = task.working_dir;
         _json_task["uuid"] = task.uuid;
         _json_task["commands"] = json::array();
         for (auto &cmd : task.commands)
@@ -290,7 +290,7 @@ namespace flowhook
         for (auto &t : config_obj["tasks"])
         {
             Task _ts = TRY(convert_json_to_task(t), void);
-            if (_ts.id == task.id)
+            if (_ts.working_dir == task.working_dir)
             {
                 return Result<void>::Err(FWError::make(
                     ErrorCode::TASK_ALREADY_EXISTS, "Error: task already exists, use update_task to update it"));
@@ -311,7 +311,7 @@ namespace flowhook
             // uuid match lets a task whose directory moved away be updated
             // in place (re-anchoring); the persisted uuid never changes
             string uuid = it->value("uuid", "");
-            if (id == task.id || (!task.uuid.empty() && uuid == task.uuid))
+            if (id == task.working_dir || (!task.uuid.empty() && uuid == task.uuid))
             {
                 json _json_task = TRY(convert_task_to_json(task), void);
                 *it = _json_task;
@@ -351,7 +351,7 @@ namespace flowhook
         {
             string id = it->at("working_directory");
             string uuid = it->value("uuid", "");
-            if (id == task.id || (!task.uuid.empty() && uuid == task.uuid))
+            if (id == task.working_dir || (!task.uuid.empty() && uuid == task.uuid))
             {
                 config_obj["tasks"].erase(it);
                 isflushed = false;
@@ -369,7 +369,7 @@ namespace flowhook
         {
             Task _task;
             _task.name = it->at("task_name");
-            _task.id = it->at("working_directory");
+            _task.working_dir = it->at("working_directory");
             _task.uuid = it->value("uuid", "");
             _task.commands = it->at("commands");
             _task.file_paths = it->at("file_paths");

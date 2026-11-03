@@ -63,7 +63,7 @@ Result<Task> FlowHookCore::find_task(const std::string &task_id) {
   if (config_manager != nullptr) {
     auto _ts = TRY(config_manager->get_tasks(), Task);
     for (auto &t : _ts)
-      if (t.id == task_id)
+      if (t.working_dir == task_id)
         return Result<Task>::Ok(t);
 
     // Re-anchor fallback: if the caller's path isn't known to config, but
@@ -75,12 +75,12 @@ Result<Task> FlowHookCore::find_task(const std::string &task_id) {
       Identity iden = marker.unwrap();
       if (!iden.uuid.empty()) {
         for (auto &t : _ts) {
-          if (t.uuid == iden.uuid && !t.uuid.empty() && !fs::exists(t.id)) {
+          if (t.uuid == iden.uuid && !t.uuid.empty() && !fs::exists(t.working_dir)) {
             FW_VERBOSE("[FLOWHOOK] Re-anchoring task '" + t.name + "': " +
-                       t.id + " -> " + task_id);
-            std::string old_id = t.id;
+                       t.working_dir + " -> " + task_id);
+            std::string old_id = t.working_dir;
             Task reanchored = t;
-            reanchored.id = task_id;
+            reanchored.working_dir = task_id;
             for (auto &dp : reanchored.dir_paths) {
               if (dp.rfind(old_id, 0) == 0) {
                 dp = task_id + dp.substr(old_id.size());
@@ -166,8 +166,8 @@ Result<void> FlowHookCore::init() {
     // represented in degraded state: no watchers, no log files, but the
     // task stays visible and re-anchorable. One stale dir must not abort
     // the whole init.
-    if (!fs::exists(task.id)) {
-      TaskRunner *tr = TRY(TaskRunner::create_degraded(task.name, task.id), void);
+    if (!fs::exists(task.working_dir)) {
+      TaskRunner *tr = TRY(TaskRunner::create_degraded(task.name, task.working_dir), void);
       if (!task.uuid.empty())
         tr->adopt_uuid(task.uuid);
       for (auto i : task.ignored_paths)
@@ -188,14 +188,14 @@ Result<void> FlowHookCore::init() {
       for (auto f : task.on_failure)
         TEST(tr->add_on_failure(f));
       task_runners.push_back(tr);
-      FW_VERBOSE("[FLOWHOOK] Task '" + task.name + "' at " + task.id +
+      FW_VERBOSE("[FLOWHOOK] Task '" + task.name + "' at " + task.working_dir +
                  " has no working directory: loaded in degraded state.\n" +
                  "           cd into the renamed directory and run flowhook "
                  "check to re-anchor it.");
       continue;
     }
 
-    TaskRunner *tr = TRY(TaskRunner::create(task.name, task.id), void);
+    TaskRunner *tr = TRY(TaskRunner::create(task.name, task.working_dir), void);
     // config owns identity: the freshly stamped runner uuid is discarded
     // in favor of the persisted one
     if (!task.uuid.empty())
@@ -204,14 +204,14 @@ Result<void> FlowHookCore::init() {
     // identity reconciliation (report only): a marker whose uuid disagrees
     // with the config entry means this directory may belong to another task
     // and adopting it silently would be unsafe
-    auto marker = read_marker(task.id);
+    auto marker = read_marker(task.working_dir);
     if (marker.isOk()) {
       std::string marker_uuid = marker.unwrap().uuid;
       std::string config_uuid = tr->get_task().uuid;
       if (marker_uuid != config_uuid) {
         FW_VERBOSE(
             "[FLOWHOOK] Identity conflict: task '" + task.name + "' at " +
-            task.id + " claims uuid " + config_uuid + " but its marker says " +
+            task.working_dir + " claims uuid " + config_uuid + " but its marker says " +
             marker_uuid + "\n" +
             "           this directory may belong to another task — resolve "
             "it explicitly\n" +
@@ -345,8 +345,8 @@ Result<void> FlowHookCore::delete_task(const std::string &task_id) {
       Task _task_to_be_deleted = (*it)->get_task();
       TEST(config_manager->delete_task(_task_to_be_deleted));
       TEST(delete_marker(task_id));
-      if (_task_to_be_deleted.id != task_id) {
-        delete_marker(_task_to_be_deleted.id);
+      if (_task_to_be_deleted.working_dir != task_id) {
+        delete_marker(_task_to_be_deleted.working_dir);
       }
       task_runners.erase(it);
       FW_VERBOSE("[FLOWHOOK] Task deleted: " + task_id + "' ✓");
