@@ -5,6 +5,7 @@
 
 
 #include "../../src/include/types.h"
+#include "../../src/include/identity.h"
 #include "../utest.h"
 #include "../../src/include/json.hpp"
 #include "../config_test.h"
@@ -124,9 +125,10 @@ UTEST_F(ConfigManagerFixture, uuid_round_trip)
     EXPECT_EQ(tasks.unwrap()[0].uuid, "test-uuid-1234");
 }
 
-// old configs written before uuid existed must load with an empty uuid
+// old configs written before uuid existed whose dir is missing load with empty uuid
 UTEST_F(ConfigManagerFixture, legacy_config_missing_uuid)
 {
+    utest_fixture->t->id = "/tmp/cm_legacy_missing";
     utest_fixture->t->uuid.clear();
     ASSERT_TRUE(utest_fixture->cm->log_task(*utest_fixture->t).isOk());
     // strip uuid key from the config json to simulate a legacy file
@@ -140,6 +142,40 @@ UTEST_F(ConfigManagerFixture, legacy_config_missing_uuid)
     auto tasks = r.unwrap()->get_tasks();
     ASSERT_EQ(tasks.unwrap().size(), 1);
     EXPECT_EQ(tasks.unwrap()[0].uuid, "");
+}
+
+// legacy configs without uuid whose task directory exists are auto-backfilled
+UTEST_F(ConfigManagerFixture, legacy_config_backfilled_for_existing_dir)
+{
+    utest_fixture->t->uuid.clear();
+    ASSERT_TRUE(utest_fixture->cm->log_task(*utest_fixture->t).isOk());
+    auto config = ConfigManagerTest::get_config(utest_fixture->cm);
+    for (auto &t : config["tasks"])
+        t.erase("uuid");
+    std::ofstream("/tmp/cm_test/config.json") << config.dump(4);
+
+    auto r = ConfigManager::create();
+    ASSERT_TRUE(r.isOk());
+    auto tasks = r.unwrap()->get_tasks();
+    ASSERT_EQ(tasks.unwrap().size(), 1);
+    std::string assigned_uuid = tasks.unwrap()[0].uuid;
+    EXPECT_FALSE(assigned_uuid.empty());
+
+    // marker was written to disk
+    auto marker = read_marker("/tmp/cm_test");
+    ASSERT_TRUE(marker.isOk());
+    EXPECT_EQ(marker.unwrap().uuid, assigned_uuid);
+
+    // .flowhook was added to ignored_paths
+    bool has_marker_ignore = false;
+    for (auto &ip : tasks.unwrap()[0].ignored_paths) {
+        if (ip == MARKER_FILE_NAME) {
+            has_marker_ignore = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(has_marker_ignore);
+    delete_marker("/tmp/cm_test");
 }
 
 
