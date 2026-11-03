@@ -48,6 +48,10 @@ if(BUILD_TESTING)
     target_link_libraries(test_flowhook_core PRIVATE flowhook_lib)
     target_include_directories(test_flowhook_core PRIVATE tests)
 
+    add_executable(test_lazy_core tests/integration/test_lazy_core.cpp)
+    target_link_libraries(test_lazy_core PRIVATE flowhook_lib)
+    target_include_directories(test_lazy_core PRIVATE tests)
+
     enable_testing()
     add_test(NAME flowhook_filewatcher_tests COMMAND test_filewatcher)
     add_test(NAME flowhook_task_runner_tests COMMAND test_task_runner)
