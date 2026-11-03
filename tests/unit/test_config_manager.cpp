@@ -106,6 +106,43 @@ UTEST_F(ConfigManagerFixture, log_task_inbatch)
     EXPECT_TRUE(c.isOk());
 }
 
+// --------------------------------------------------------------------------------------------
+// uuid persistence
+// --------------------------------------------------------------------------------------------
+
+// uuid must round-trip through config without changing any other field
+UTEST_F(ConfigManagerFixture, uuid_round_trip)
+{
+    utest_fixture->t->uuid = "test-uuid-1234";
+    ASSERT_TRUE(utest_fixture->cm->log_task(*utest_fixture->t).isOk());
+    utest_fixture->cm->flush();
+
+    auto r = ConfigManager::create();
+    ASSERT_TRUE(r.isOk());
+    auto tasks = r.unwrap()->get_tasks();
+    ASSERT_EQ(tasks.unwrap().size(), 1);
+    EXPECT_EQ(tasks.unwrap()[0].uuid, "test-uuid-1234");
+}
+
+// old configs written before uuid existed must load with an empty uuid
+UTEST_F(ConfigManagerFixture, legacy_config_missing_uuid)
+{
+    utest_fixture->t->uuid.clear();
+    ASSERT_TRUE(utest_fixture->cm->log_task(*utest_fixture->t).isOk());
+    // strip uuid key from the config json to simulate a legacy file
+    auto config = ConfigManagerTest::get_config(utest_fixture->cm);
+    for (auto &t : config["tasks"])
+        t.erase("uuid");
+    std::ofstream("/tmp/cm_test/config.json") << config.dump(4);
+
+    auto r = ConfigManager::create();
+    ASSERT_TRUE(r.isOk());
+    auto tasks = r.unwrap()->get_tasks();
+    ASSERT_EQ(tasks.unwrap().size(), 1);
+    EXPECT_EQ(tasks.unwrap()[0].uuid, "");
+}
+
+
 
 // --------------------------------------------------------------------------------------------
 // delete task
