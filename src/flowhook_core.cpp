@@ -222,6 +222,10 @@ Result<void> FlowHookCore::set_timeout(const std::string &task_id, int timeout) 
 
 std::vector<std::string>
 FlowHookCore::get_resolved_files(const std::string task_id) {
+  // resolved files come from live watchers, so a task that has no runner
+  // (lazy mode) has nothing to resolve
+  if (!is_task(task_id))
+    return std::vector<std::string>();
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     if ((*it)->get_task_id() == task_id) {
       return (*it)->get_resolved_files();
