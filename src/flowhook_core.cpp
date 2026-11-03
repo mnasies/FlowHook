@@ -121,6 +121,39 @@ Result<void> FlowHookCore::init() {
 
   FW_LOG("[DEBUG] loading tasks from config file ....");
   for (auto task : tasks) {
+    // A task whose working directory has vanished (renamed, deleted) is
+    // represented in degraded state: no watchers, no log files, but the
+    // task stays visible and re-anchorable. One stale dir must not abort
+    // the whole init.
+    if (!fs::exists(task.id)) {
+      TaskRunner *tr = TRY(TaskRunner::create_degraded(task.name, task.id), void);
+      if (!task.uuid.empty())
+        tr->adopt_uuid(task.uuid);
+      for (auto i : task.ignored_paths)
+        TEST(tr->add_ignored_path(i));
+      for (auto ip : task.ignored_patterns)
+        TEST(tr->add_ignored_pattern(ip));
+      if (task.isActive) {
+        tr->activate();
+      } else {
+        tr->deactivate();
+      }
+      tr->set_depth(task.watching_depth);
+      tr->set_timeout(task.build_timeout);
+      for (auto c : task.commands)
+        TEST(tr->add_command(c));
+      for (auto s : task.on_success)
+        TEST(tr->add_on_success(s));
+      for (auto f : task.on_failure)
+        TEST(tr->add_on_failure(f));
+      task_runners.push_back(tr);
+      FW_VERBOSE("[FLOWHOOK] Task '" + task.name + "' at " + task.id +
+                 " has no working directory: loaded in degraded state.\n" +
+                 "           cd into the renamed directory and run flowhook "
+                 "check to re-anchor it.");
+      continue;
+    }
+
     TaskRunner *tr = TRY(TaskRunner::create(task.name, task.id), void);
     // config owns identity: the freshly stamped runner uuid is discarded
     // in favor of the persisted one
@@ -609,13 +642,25 @@ Result<void> FlowHookCore::start_all() {
         FWError::make(ErrorCode::TASK_NOT_FOUND, "Error: no tasks to start ✗"));
   }
 
+  int started = 0;
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
     if ((*it)->is_running()) {
-      return Result<void>::Err(FWError::make(ErrorCode::TASK_ALREADY_RUNNING,
-                                             "Error: task already running ✗"));
+      continue; // already running, not an error
     }
     FW_LOG("[DEBUG] Starting task: " + (*it)->get_task_id() + " ...");
-    TEST((*it)->start());
+    auto r = (*it)->start();
+    if (r.isErr()) {
+      // degraded (missing dir) tasks are skipped with a warning; starting
+      // the rest must not be blocked by a single unreachable task
+      FW_VERBOSE("[FLOWHOOK] Skipped task '" + (*it)->get_task_name() +
+                 "': " + r.getErrMessage());
+      continue;
+    }
+    started++;
+  }
+  if (started == 0) {
+    return Result<void>::Err(
+        FWError::make(ErrorCode::TASK_NOT_FOUND, "Error: no startable tasks ✗"));
   }
   FW_VERBOSE("[FLOWHOOK] All tasks started ✓");
   return Result<void>::Ok();
@@ -646,7 +691,14 @@ Result<void> FlowHookCore::start_active() {
     if ((*it)->is_active()) {
       found_active = true;
       FW_LOG("[DEBUG] Starting task " + (*it)->get_task_id() + " ...");
-      TEST((*it)->start());
+      auto r = (*it)->start();
+      if (r.isErr()) {
+        // degraded (missing dir) tasks are skipped with a warning; starting
+        // the rest must not be blocked by a single unreachable task
+        FW_VERBOSE("[FLOWHOOK] Skipped task '" + (*it)->get_task_name() +
+                   "': " + r.getErrMessage());
+        continue;
+      }
     }
   }
   if (!found_active) {
