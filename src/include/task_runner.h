@@ -45,6 +45,10 @@ namespace flowhook
         std::vector<std::string> get_resolved_files() const { return resolved_files; }
         int get_build_timeout() const { return task.build_timeout; }
 
+        // adopts the uuid recorded in the persisted config; identity always
+        // flows from config, never from the freshly stamped runner value
+        void adopt_uuid(const std::string &uuid) { task.uuid = uuid; }
+
 
         bool isIgnored(const std::string &path);
 

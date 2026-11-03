@@ -316,6 +316,9 @@ Result<void> TaskRunner::add_path_internal(const string &path, int MAX_DEPTH,
     FW_LOG("[DEBUG] Path " + path +
            " is a directory adding child files recursively...");
     for (auto &entry : fs::directory_iterator(path)) {
+      if (entry.path().filename() == MARKER_FILE_NAME) {
+        continue; // the identity marker is FlowHook's own bookkeeping file
+      }
       if (isIgnored(entry.path().string())) {
         FW_LOG("[DEBUG] Path " + entry.path().string() +
                " matches ignored patterns.");

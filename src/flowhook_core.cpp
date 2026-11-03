@@ -5,6 +5,7 @@
 #include "include/error/error.h"
 #include "include/error/result.h"
 #include "include/flowhook_core.h"
+#include "include/identity.h"
 #include "include/macros.hpp"
 #include "include/task_runner.h"
 
@@ -38,7 +39,9 @@ Result<void> FlowHookCore::set_default_ignored() {
   default_ignored_patterns = {"*.o",   "*.a",   "*.so", "*.out", "*.exe",
                               "*.swp", "*.swo", "*~",   ".#*",   "*.class",
                               "*.pyc", "*.log", "*.git"};
-  default_ignored_paths = {".git"};
+  // .flowhook carries the project identity marker; watch activity on it is
+  // always FlowHook's own bookkeeping
+  default_ignored_paths = {".git", ".flowhook"};
   return Result<void>::Ok();
 }
 
@@ -91,6 +94,8 @@ void FlowHookCore::resolve_files_lazy(const Task &task, const string &path,
     return;
   if (fs::is_directory(path)) {
     for (auto &entry : fs::directory_iterator(path)) {
+      if (entry.path().filename() == MARKER_FILE_NAME)
+        continue; // the identity marker is FlowHook's own bookkeeping file
       if (is_lazy_ignored(task, entry.path().string()))
         continue;
       if (entry.is_regular_file()) {
@@ -117,6 +122,29 @@ Result<void> FlowHookCore::init() {
   FW_LOG("[DEBUG] loading tasks from config file ....");
   for (auto task : tasks) {
     TaskRunner *tr = TRY(TaskRunner::create(task.name, task.id), void);
+    // config owns identity: the freshly stamped runner uuid is discarded
+    // in favor of the persisted one
+    if (!task.uuid.empty())
+      tr->adopt_uuid(task.uuid);
+
+    // identity reconciliation (report only): a marker whose uuid disagrees
+    // with the config entry means this directory may belong to another task
+    // and adopting it silently would be unsafe
+    auto marker = read_marker(task.id);
+    if (marker.isOk()) {
+      std::string marker_uuid = marker.unwrap().uuid;
+      std::string config_uuid = tr->get_task().uuid;
+      if (marker_uuid != config_uuid) {
+        FW_VERBOSE(
+            "[FLOWHOOK] Identity conflict: task '" + task.name + "' at " +
+            task.id + " claims uuid " + config_uuid + " but its marker says " +
+            marker_uuid + "\n" +
+            "           this directory may belong to another task — resolve "
+            "it explicitly\n" +
+            "           (flowhook remove, or clean the stale .flowhook marker)");
+      }
+    }
+
     for (auto i : task.ignored_paths)
       TEST(tr->add_ignored_path(i));
     for (auto ip : task.ignored_patterns)
@@ -208,6 +236,8 @@ Result<void> FlowHookCore::create_task(const std::string &task_name,
 
   task_runners.push_back(result);
   TEST(config_manager->log_task(result->get_task()));
+  // a from-scratch task owns its directory: stamp the identity marker
+  TEST(write_marker(task_id, result->get_task()));
 
   FW_LOG("[DEBUG] logging task to config file completed. ✓");
   FW_VERBOSE("[FLOWHOOK] Task created: name='" + task_name + "' path='" +
@@ -222,6 +252,7 @@ Result<void> FlowHookCore::delete_task(const std::string &task_id) {
     if (name == task_id) {
       Task _task_to_be_deleted = (*it)->get_task();
       TEST(config_manager->delete_task(_task_to_be_deleted));
+      TEST(delete_marker(task_id));
       task_runners.erase(it);
       FW_VERBOSE("[FLOWHOOK] Task deleted: " + task_id + "' ✓");
       return Result<void>::Ok();
