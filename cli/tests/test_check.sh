@@ -74,3 +74,31 @@ test_check_active_after_set_active() {
   assert_exit 0 "$code" "check --active exits 0"
   assert_contains "$out" "is active" "check --active reports persisted active flag"
 }
+
+# a corrupted config must not crash any command; every command should print a
+# message and exit cleanly (never segfault)
+test_corrupted_config_does_not_segfault() {
+  fresh_dir
+  echo "{ corrupted" > "$FLOWHOOK_CONFIG_DIR_TEST"/config.json
+  local code
+  flowhook list </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: list segfaults on corrupted config"; }
+  flowhook check </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: check segfaults on corrupted config"; }
+  flowhook init </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: init segfaults on corrupted config"; }
+  flowhook add --command "echo hi" </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: add segfaults on corrupted config"; }
+  flowhook set --active </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: set segfaults on corrupted config"; }
+  flowhook remove </dev/null >/dev/null 2>&1; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: remove segfaults on corrupted config"; }
+  # run also starts a SIGINT-driven watcher loop when it succeeds; with a null
+  # core it must return before pausing
+  flowhook run </dev/null >/dev/null 2>&1 & local run_pid=$!
+  sleep 1
+  kill -s INT "$run_pid" 2>/dev/null || true
+  wait "$run_pid"; code=$?
+  [[ "$code" -ne 139 ]] && { PASS=$((PASS+1)); } || { FAIL=$((FAIL+1)); echo "FAIL: run segfaults on corrupted config"; }
+}
+

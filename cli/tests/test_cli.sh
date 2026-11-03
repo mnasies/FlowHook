@@ -52,6 +52,7 @@ test_check_reports_not_initialized
 test_check_survives_renamed_neighbor_dir
 test_check_depth_and_timeout_from_config
 test_check_active_after_set_active
+test_corrupted_config_does_not_segfault
 
 # -- TEST RUN --
 
