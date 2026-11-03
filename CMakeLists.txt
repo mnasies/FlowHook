@@ -14,6 +14,7 @@ add_library(flowhook_lib
     src/task_runner.cpp
     src/flowhook_core.cpp
     src/config_manager.cpp
+    src/identity.cpp
 )
 
 target_include_directories(flowhook_lib PUBLIC src/include)
@@ -37,6 +38,10 @@ if(BUILD_TESTING)
     add_executable(test_session_logger tests/unit/test_session_logger.cpp)
     target_link_libraries(test_session_logger PRIVATE flowhook_lib)
     target_include_directories(test_session_logger PRIVATE tests)
+
+    add_executable(test_identity tests/unit/test_identity.cpp)
+    target_link_libraries(test_identity PRIVATE flowhook_lib)
+    target_include_directories(test_identity PRIVATE tests)
 
     add_executable(test_config_manager tests/unit/test_config_manager.cpp)
     target_link_libraries(test_config_manager PRIVATE flowhook_lib)
