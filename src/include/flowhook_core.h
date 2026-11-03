@@ -23,6 +23,7 @@ namespace flowhook {
             bool isValidDir(std::string &path);
             Result<void> init();
             Result<void> lazy_init();
+            Result<Task> find_task(const std::string &task_id);
         public:
             static Result<FlowHookCore*> create();
             static Result<FlowHookCore*> lazy_create();

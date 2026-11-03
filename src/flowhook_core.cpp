@@ -46,6 +46,26 @@ Result<void> FlowHookCore::lazy_init() {
     return Result<void>::Ok();
 }
 
+// Looks up a task by id in the live task runners first, then falls back to
+// the persisted config. This lets read-only methods work in lazy mode, where
+// no task runners are created.
+Result<Task> FlowHookCore::find_task(const std::string &task_id) {
+  for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
+    if ((*it)->get_task_id() == task_id)
+      return Result<Task>::Ok((*it)->get_task());
+  }
+
+  if (config_manager != nullptr) {
+    auto _ts = TRY(config_manager->get_tasks(), Task);
+    for (auto &t : _ts)
+      if (t.id == task_id)
+        return Result<Task>::Ok(t);
+  }
+
+  return Result<Task>::Err(FWError::make(
+      ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+}
+
 Result<void> FlowHookCore::init() {
   config_manager = TRY(ConfigManager::create(), void);
   FW_LOG("[DEBUG] initializing a FlowHook core instance ....");
