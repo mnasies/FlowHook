@@ -24,6 +24,8 @@ namespace flowhook {
             Result<void> init();
             Result<void> lazy_init();
             Result<Task> find_task(const std::string &task_id);
+            bool is_lazy_ignored(const Task &task, const std::string &path);
+            void resolve_files_lazy(const Task &task, const std::string &path, int current_depth, std::vector<std::string> &out);
         public:
             static Result<FlowHookCore*> create();
             static Result<FlowHookCore*> lazy_create();

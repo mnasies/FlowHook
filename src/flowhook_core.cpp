@@ -8,6 +8,8 @@
 #include "include/macros.hpp"
 #include "include/task_runner.h"
 
+#include <fnmatch.h>
+
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -64,6 +66,45 @@ Result<Task> FlowHookCore::find_task(const std::string &task_id) {
 
   return Result<Task>::Err(FWError::make(
       ErrorCode::TASK_NOT_FOUND, "Error: task not found " + task_id + " ✗"));
+}
+
+// Mirrors TaskRunner::isIgnored for tasks that have no live runner.
+bool FlowHookCore::is_lazy_ignored(const Task &task, const std::string &path) {
+  string filename = fs::path(path).filename().string();
+  for (auto &p : task.ignored_paths)
+    if (p == path || p == filename)
+      return true;
+  for (auto &p : task.ignored_patterns)
+    if (fnmatch(p.c_str(), filename.c_str(), 0) == 0 ||
+        fnmatch(p.c_str(), path.c_str(), 0) == 0)
+      return true;
+  return false;
+}
+
+// Mirrors TaskRunner::add_path_internal's traversal (resolved file list only)
+// without touching any watcher. Skips paths that no longer exist so renamed
+// or deleted paths are silently filtered out.
+void FlowHookCore::resolve_files_lazy(const Task &task, const string &path,
+                                      int current_depth,
+                                      vector<string> &out) {
+  if (!fs::exists(path) || is_lazy_ignored(task, path))
+    return;
+  if (fs::is_directory(path)) {
+    for (auto &entry : fs::directory_iterator(path)) {
+      if (is_lazy_ignored(task, entry.path().string()))
+        continue;
+      if (entry.is_regular_file()) {
+        out.push_back(entry.path().string());
+      } else if (entry.is_directory() &&
+                 current_depth < task.watching_depth) {
+        out.push_back(entry.path().string());
+        resolve_files_lazy(task, entry.path().string(), current_depth + 1,
+                           out);
+      }
+    }
+  } else {
+    out.push_back(path);
+  }
 }
 
 Result<void> FlowHookCore::init() {
@@ -222,16 +263,24 @@ Result<void> FlowHookCore::set_timeout(const std::string &task_id, int timeout) 
 
 std::vector<std::string>
 FlowHookCore::get_resolved_files(const std::string task_id) {
-  // resolved files come from live watchers, so a task that has no runner
-  // (lazy mode) has nothing to resolve
-  if (!is_task(task_id))
+  auto t = find_task(task_id);
+  if (t.isErr())
     return std::vector<std::string>();
+  Task task = t.unwrap();
+
+  // full mode: report the live watcher state
   for (auto it = task_runners.begin(); it != task_runners.end(); it++) {
-    if ((*it)->get_task_id() == task_id) {
+    if ((*it)->get_task_id() == task_id)
       return (*it)->get_resolved_files();
-    }
   }
-  return std::vector<std::string>();
+
+  // lazy mode: resolve from the persisted task without any watcher
+  vector<string> files;
+  for (auto &p : task.file_paths)
+    resolve_files_lazy(task, p, 0, files);
+  for (auto &p : task.dir_paths)
+    resolve_files_lazy(task, p, 0, files);
+  return files;
 }
 
 Result<int> FlowHookCore::get_task_depth(const std::string &task_id) {
