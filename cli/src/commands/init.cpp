@@ -24,7 +24,7 @@ namespace flowhook_cli {
         init->add_option("--task", task_name, "Task name to initialize [optional] \n// filename of the current folder will be taken as task name if not provided");
 
         init->callback([=, &fh]() mutable {
-            auto _fh = flowhook::FlowHookCore::lazy_create();
+            auto _fh = flowhook::FlowHookCore::create();
             fh = handle_fh_error(_fh);
 
             fs::path cwd = fs::canonical(fs::current_path());
