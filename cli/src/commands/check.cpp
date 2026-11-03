@@ -32,6 +32,8 @@ namespace flowhook_cli {
         check->callback([=, &fh]() mutable {
             auto _fh = flowhook::FlowHookCore::lazy_create();
             fh = handle_fh_error(_fh);
+            if (fh == nullptr)
+                return;
 
             std::string check_task_id = fs::current_path().string();
 

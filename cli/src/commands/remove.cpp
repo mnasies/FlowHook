@@ -43,6 +43,8 @@ void register_remove(CLI::App *app, flowhook::FlowHookCore *&fh) {
   remove->callback([=, &fh]() mutable {
       auto _fh = flowhook::FlowHookCore::create();
       fh = handle_fh_error(_fh);
+      if (fh == nullptr)
+          return;
 
       fs::path cwd = fs::current_path();
     task_id = cwd.string();

@@ -31,6 +31,8 @@ void register_run(CLI::App *app, flowhook::FlowHookCore *&fh) {
   run->callback([=, &fh]() mutable {
       auto _fh = flowhook::FlowHookCore::create();
       fh = handle_fh_error(_fh);
+      if (fh == nullptr)
+          return;
 
       std::string run_task_id = fs::current_path().string();
 
