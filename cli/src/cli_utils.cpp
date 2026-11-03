@@ -1,4 +1,3 @@
-#pragma once
 #include "../../src/include/flowhook_core.h"
 #include <filesystem>
 #include "include/cli_utils.h"
