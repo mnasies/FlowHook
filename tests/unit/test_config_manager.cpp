@@ -36,13 +36,13 @@ UTEST_F_SETUP(ConfigManagerFixture)
     fs::create_directories("/tmp/cm_test");
     fs::create_directories("/tmp/cm_test2");
 
-    utest_fixture->t = new Task("/tmp/cm_test", "test_task", 3, {"ls"},
+    utest_fixture->t = new Task("/tmp/cm_test", "test_task", "", 3, {"ls"},
         {"/tmp/cm_test_file.txt"}, {"/tmp/cm_test"}, vector<string>{"ls"}, vector<string>{"ls"}, {"*.o"}, {".git"}, true, true, 0);
 
-    utest_fixture->t2 = new Task("test_task2", "/tmp/cm_test2", 3, {"ls"},
+    utest_fixture->t2 = new Task("test_task2", "/tmp/cm_test2", "", 3, {"ls"},
         {"/tmp/cm_test_file.txt"}, {"/tmp/cm_test"}, vector<string>{"ls"}, vector<string>{"cd, ls"}, {"*.o"}, {".git"}, true, true, 0);
 
-    utest_fixture->t3 = new Task("/tmp/cm_test", "test_task", 3, {"cd", "make"},
+    utest_fixture->t3 = new Task("/tmp/cm_test", "test_task", "", 3, {"cd", "make"},
         {"/tmp/cm_test_file.txt"}, {"/tmp/cm_test"}, vector<string>{"ls"}, vector<string>{"cd, ls"}, {"*.o"}, {".git"}, true, true, 0);
 }
 

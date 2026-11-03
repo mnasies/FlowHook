@@ -109,6 +109,8 @@ namespace flowhook
         Task _task;
         _task.name = json_task.at("task_name");
         _task.id = json_task.at("working_directory");
+        // uuid may be absent in configs written before identity markers existed
+        _task.uuid = json_task.value("uuid", "");
 
         vector<string> _commands;
         for (auto &cmd : json_task.at("commands"))
@@ -170,6 +172,7 @@ namespace flowhook
         json _json_task = json::object();
         _json_task["task_name"] = task.name;
         _json_task["working_directory"] = task.id;
+        _json_task["uuid"] = task.uuid;
         _json_task["commands"] = json::array();
         for (auto &cmd : task.commands)
         {
@@ -297,6 +300,7 @@ namespace flowhook
             Task _task;
             _task.name = it->at("task_name");
             _task.id = it->at("working_directory");
+            _task.uuid = it->value("uuid", "");
             _task.commands = it->at("commands");
             _task.file_paths = it->at("file_paths");
             _task.dir_paths = it->at("dir_paths");
