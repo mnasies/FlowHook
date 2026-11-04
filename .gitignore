@@ -83,8 +83,3 @@ Testing/
 # agent files
 
 .agents
-
-# asciinema files
-
-*.cast
-*.gif
