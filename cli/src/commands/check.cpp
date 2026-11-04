@@ -1,12 +1,13 @@
 #include "../../src/include/flowhook_core.h"
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
+#include "../include/cli_utils.h"
 
 
 namespace fs = std::filesystem;
 
 namespace flowhook_cli {
-    void register_check(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_check(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
         auto* check = app->add_subcommand("check", "check the status of the task");
 
@@ -28,10 +29,15 @@ namespace flowhook_cli {
         static bool timeout = false;
         check->add_flag("--timeout", timeout, "Outputs the timeout set for the commands executed by the task.");
 
-        check->callback([=]() mutable {
-          std::string check_task_id = fs::current_path().string();
+        check->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::lazy_create();
+            fh = handle_fh_error(_fh);
+            if (fh == nullptr)
+                return;
 
-          if(!active && !deactive && !depth) {
+            std::string check_task_id = fs::current_path().string();
+
+          if(!active && !deactive && !depth && !timeout) {
               if(!fh->is_task(check_task_id)) {
                   std::cout << "FlowHook task has not been initialized in the current directory." << std::endl;
                   return;

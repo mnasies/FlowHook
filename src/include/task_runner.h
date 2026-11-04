@@ -16,7 +16,7 @@ namespace flowhook
     {
     private:
         FileWatcher *fw = nullptr;
-        SessionLogger *sl;
+        SessionLogger *sl = nullptr;
         Task task;
         std::vector<WatchCallback> callbacks;
 
@@ -30,17 +30,24 @@ namespace flowhook
 
         TaskRunner() = default;
         Result<void> init(const std::string &task_name, const std::string &working_directory);
+        Result<void> init_degraded(const std::string &task_name, const std::string &working_directory);
         Result<void> add_path_internal(const std::string &path, int MAX_DEPTH, int CURRENT_DEPTH);
         bool check_path_existence(const std::string &path);
     public:
         static Result<TaskRunner*> create(const std::string &task_name, const std::string &working_directory);
+        static Result<TaskRunner*> create_degraded(const std::string &task_name, const std::string &working_directory);
+        bool is_degraded() const;
         ~TaskRunner();
 
         std::string get_task_name() const { return task.name; }
-        std::string get_task_id() const { return task.id; }
+        std::string get_task_id() const { return task.working_dir; }
         Task get_task() const { return task; }
         std::vector<std::string> get_resolved_files() const { return resolved_files; }
         int get_build_timeout() const { return task.build_timeout; }
+
+        // adopts the uuid recorded in the persisted config; identity always
+        // flows from config, never from the freshly stamped runner value
+        void adopt_uuid(const std::string &uuid) { task.uuid = uuid; }
 
 
         bool isIgnored(const std::string &path);

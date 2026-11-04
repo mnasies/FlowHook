@@ -1,13 +1,15 @@
 #include "../../src/include/flowhook_core.h"
 #include "../include/CLI11.hpp"
 #include "../../src/include/macros.hpp"
+#include "../include/cli_utils.h"
 #include <filesystem>
 
 
 namespace fs = std::filesystem;
 namespace flowhook_cli {
-    void register_init(CLI::App* app, flowhook::FlowHookCore* fh)
+    void register_init(CLI::App* app, flowhook::FlowHookCore* &fh)
     {
+
         // init subcommand
         auto *init =
             app->add_subcommand("init", "initializing a new FlowHook task instance in the current folder");
@@ -21,8 +23,13 @@ namespace flowhook_cli {
         static std::string task_name = "";
         init->add_option("--task", task_name, "Task name to initialize [optional] \n// filename of the current folder will be taken as task name if not provided");
 
-        init->callback([=]() mutable {
-          fs::path cwd = fs::canonical(fs::current_path());
+        init->callback([=, &fh]() mutable {
+            auto _fh = flowhook::FlowHookCore::create();
+            fh = handle_fh_error(_fh);
+            if (fh == nullptr)
+                return;
+
+            fs::path cwd = fs::canonical(fs::current_path());
 
           if (task_name.empty())
             task_name = cwd.filename().string();

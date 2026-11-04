@@ -64,8 +64,9 @@ namespace flowhook
 
     struct Task
     {
-        std::string id = ""; // this is a name that will be used internally and always unique, not assigned by the user. Mostly the absolute path of the cwd
+        std::string working_dir = ""; // absolute path of the working directory (cwd)
         std::string name = ""; // user assigned name can be duplicated, defaults to the filename of the cwd
+        std::string uuid = ""; // stable identity token mirrored in the .flowhook marker file; the path may drift, this cannot
         int watching_depth = 3;
         std::vector<std::string> commands = {};
         std::vector<std::string> file_paths = {};
@@ -82,7 +83,7 @@ namespace flowhook
         int build_timeout = 0;
 
         bool isNull() const {
-            return id.empty() && name.empty() && commands.empty() && file_paths.empty() && dir_paths.empty() &&
+            return working_dir.empty() && name.empty() && uuid.empty() && commands.empty() && file_paths.empty() && dir_paths.empty() &&
                 on_success.empty() && on_failure.empty() && !isActive && !isRunning && watching_depth == 3 &&
                 ignored_paths.empty() && ignored_patterns.empty() && build_timeout == 0;
         }

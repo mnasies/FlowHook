@@ -1,13 +1,12 @@
 # FlowHook
 
  ```text
- ███████╗██╗      ██████╗ ██╗    ██╗██╗  ██╗ ██████╗  ██████╗ ██╗  ██╗    
- ██╔════╝██║     ██╔═══██╗██║    ██║██║  ██║██╔═══██╗██╔═══██╗██║ ██╔╝    
- █████╗  ██║     ██║   ██║██║ █╗ ██║███████║██║   ██║██║   ██║█████╔╝     
- ██╔══╝  ██║     ██║   ██║██║███╗██║██╔══██║██║   ██║██║   ██║██╔═██╗     
- ██║     ███████╗╚██████╔╝╚███╔███╔╝██║  ██║╚██████╔╝╚██████╔╝██║  ██╗    
- ╚═╝     ╚══════╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝    
-
+    ________    ____ _       ____  ______  ____  __ __
+   / ____/ /   / __ \ |     / / / / / __ \/ __ \/ //_/
+  / /_  / /   / / / / | /| / / /_/ / / / / / / / ,<
+ / __/ / /___/ /_/ /| |/ |/ / __  / /_/ / /_/ / /| |
+/_/   /_____/\____/ |__/|__/_/ /_/\____/\____/_/ |_|                                                                                                                                            
+                                                                      
 ```
 
 [![Build Status](https://github.com/mnasies/FlowHook/actions/workflows/tests.yml/badge.svg)](https://github.com/mnasies/FlowHook/actions) 
@@ -32,7 +31,7 @@ Flowhook is a lightweight C++ file-watcher CLI using Linux inotify. It allows yo
 
 ### Quick Demo
 
-[![asciinema demo](https://asciinema.org/a/Wc2xprecUM1YnUK0.svg)](https://asciinema.org/a/Wc2xprecUM1YnUK0)
+![FlowHook demo](assets/demo.gif)
 
 *Click the player above to watch a full 3-minute walkthrough of FlowHook tracking file modifications and running build commands automatically including the hook feature.*
 
@@ -46,25 +45,37 @@ While there are other file watchers out there, FlowHook was designed with a few 
 
 ### Installation
 
-#### Option 1
+#### Option 1: Arch Linux (AUR)
 
-This is the easiest way to get started with FlowHook.
+If you are on Arch Linux or an Arch-based distribution (e.g., Manjaro, EndeavourOS), you can install FlowHook directly from the [AUR](https://aur.archlinux.org/packages/flowhook-bin) using an AUR helper:
+
+```bash
+# Using yay
+yay -S flowhook-bin
+
+# Using paru
+paru -S flowhook-bin
+```
+
+#### Option 2: Pre-compiled Binary (GitHub Releases)
+
+This is the easiest way to get started on other Linux distributions.
 
 1. Grab the latest release from the [GitHub releases page](https://github.com/mnasies/FlowHook/releases/latest).
-2. Unzip the downloaded file.
+2. Unzip the downloaded file:
 ```bash
 unzip flowhook.zip 
 ```
-3. Grant execute permissions to the `flowhook` binary.
+3. Grant execute permissions to the `flowhook` binary:
 ```bash
 chmod +x flowhook
 ```
-4. Move the `flowhook` binary to a directory in your `PATH` (e.g. `/usr/local/bin`).
+4. Move the `flowhook` binary to a directory in your `PATH` (e.g. `/usr/local/bin`):
 ```bash
 sudo mv flowhook /usr/local/bin/
 ```
 
-#### Option 2
+#### Option 3: Build from Source (CMake)
 
 If you prefer to compile from source or are modifying the codebase, ensure your system has a modern C++ toolchain supporting C++17/20, cmake, and make.
 

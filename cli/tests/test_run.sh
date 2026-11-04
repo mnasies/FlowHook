@@ -114,3 +114,41 @@ test_run_quiet_suppresses_command_output() {
   assert_not_contains "$out" "SHOULD_NOT_APPEAR" "run --quiet suppresses build output"
   rm -f "$outfile"
 }
+
+test_run_all_skips_degraded_task() {
+  fresh_dir
+  flowhook init >/dev/null 2>&1
+  flowhook add --command "echo hi" >/dev/null 2>&1
+
+  local dir_a
+  dir_a=$(pwd)
+  local neighbor="${dir_a}_neighbor"
+  local neighbor_vanished="${dir_a}_neighbor_vanished"
+  rm -rf "$neighbor" "$neighbor_vanished"
+  mkdir -p "$neighbor"
+  cd "$neighbor" || exit 1
+  flowhook init >/dev/null 2>&1
+  flowhook add --command "echo hello" >/dev/null 2>&1
+
+  # Move neighbor dir away so it becomes stale/degraded
+  mv "$neighbor" "$neighbor_vanished"
+
+  cd "$dir_a" || exit 1
+
+  local outfile
+  outfile=$(mktemp)
+
+  flowhook run --all > "$outfile" 2>&1 &
+  local pid=$!
+
+  sleep 1
+  kill -INT "$pid"
+  wait "$pid" 2>/dev/null
+
+  local out
+  out=$(cat "$outfile")
+  assert_contains "$out" "Exiting safely" "run --all with degraded task starts and exits cleanly on SIGINT"
+  rm -f "$outfile"
+  rm -rf "$neighbor_vanished"
+}
+

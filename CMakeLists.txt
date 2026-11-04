@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(FlowHook VERSION 0.1.2)
+project(FlowHook VERSION 0.2.0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 configure_file(src/version.h.in version.h)
 set(CMAKE_CXX_STANDARD 20)
@@ -14,6 +14,7 @@ add_library(flowhook_lib
     src/task_runner.cpp
     src/flowhook_core.cpp
     src/config_manager.cpp
+    src/identity.cpp
 )
 
 target_include_directories(flowhook_lib PUBLIC src/include)
@@ -38,6 +39,10 @@ if(BUILD_TESTING)
     target_link_libraries(test_session_logger PRIVATE flowhook_lib)
     target_include_directories(test_session_logger PRIVATE tests)
 
+    add_executable(test_identity tests/unit/test_identity.cpp)
+    target_link_libraries(test_identity PRIVATE flowhook_lib)
+    target_include_directories(test_identity PRIVATE tests)
+
     add_executable(test_config_manager tests/unit/test_config_manager.cpp)
     target_link_libraries(test_config_manager PRIVATE flowhook_lib)
     target_include_directories(test_config_manager PRIVATE tests)
@@ -48,6 +53,10 @@ if(BUILD_TESTING)
     target_link_libraries(test_flowhook_core PRIVATE flowhook_lib)
     target_include_directories(test_flowhook_core PRIVATE tests)
 
+    add_executable(test_lazy_core tests/integration/test_lazy_core.cpp)
+    target_link_libraries(test_lazy_core PRIVATE flowhook_lib)
+    target_include_directories(test_lazy_core PRIVATE tests)
+
     enable_testing()
     add_test(NAME flowhook_filewatcher_tests COMMAND test_filewatcher)
     add_test(NAME flowhook_task_runner_tests COMMAND test_task_runner)
@@ -57,6 +66,7 @@ if(BUILD_TESTING)
 endif()
 
 add_executable(flowhook cli/src/main.cpp
+                         cli/src/cli_utils.cpp
                             cli/src/commands/add.cpp
                             cli/src/commands/run.cpp
                             cli/src/commands/init.cpp

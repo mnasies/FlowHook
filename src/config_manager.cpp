@@ -9,6 +9,7 @@
 #include <format>
 
 #include "include/config_manager.h"
+#include "include/identity.h"
 #include "include/macros.hpp"
 #include "version.h"
 
@@ -68,6 +69,69 @@ namespace flowhook
             }
             TEST_OVERLOADED(cm->load(file), ConfigManager *);
             file.close();
+
+            // Migration backfill: existing tasks whose directory exists on disk are
+            // auto-backfilled with identity markers and uuid persistence. Tasks whose
+            // directory vanished stay untouched.
+            if (cm->config_obj.contains("tasks") && cm->config_obj["tasks"].is_array())
+            {
+                bool dirty = false;
+                for (auto it = cm->config_obj["tasks"].begin(); it != cm->config_obj["tasks"].end(); it++)
+                {
+                    if (!it->contains("working_directory"))
+                        continue;
+                    string dir = it->at("working_directory");
+                    if (fs::exists(dir) && fs::is_directory(dir))
+                    {
+                        string uuid = it->value("uuid", "");
+                        string name = it->value("task_name", "");
+
+                        auto marker = read_marker(dir);
+                        if (marker.isErr())
+                        {
+                            if (uuid.empty())
+                            {
+                                uuid = generate_uuid();
+                                (*it)["uuid"] = uuid;
+                                dirty = true;
+                            }
+                            Task t;
+                            t.name = name;
+                            t.uuid = uuid;
+                            write_marker(dir, t);
+                        }
+                        else if (uuid.empty())
+                        {
+                            uuid = marker.unwrap().uuid;
+                            (*it)["uuid"] = uuid;
+                            dirty = true;
+                        }
+
+                        if (it->contains("ignored_paths") && (*it)["ignored_paths"].is_array())
+                        {
+                            bool has_marker = false;
+                            for (auto &p : (*it)["ignored_paths"])
+                            {
+                                if (p == MARKER_FILE_NAME)
+                                {
+                                    has_marker = true;
+                                    break;
+                                }
+                            }
+                            if (!has_marker)
+                            {
+                                (*it)["ignored_paths"].push_back(MARKER_FILE_NAME);
+                                dirty = true;
+                            }
+                        }
+                    }
+                }
+                if (dirty)
+                {
+                    cm->isflushed = false;
+                    cm->flush();
+                }
+            }
         }
         return Result<ConfigManager *>::Ok(cm);
     }
@@ -108,7 +172,9 @@ namespace flowhook
     {
         Task _task;
         _task.name = json_task.at("task_name");
-        _task.id = json_task.at("working_directory");
+        _task.working_dir = json_task.at("working_directory");
+        // uuid may be absent in configs written before identity markers existed
+        _task.uuid = json_task.value("uuid", "");
 
         vector<string> _commands;
         for (auto &cmd : json_task.at("commands"))
@@ -169,7 +235,8 @@ namespace flowhook
     {
         json _json_task = json::object();
         _json_task["task_name"] = task.name;
-        _json_task["working_directory"] = task.id;
+        _json_task["working_directory"] = task.working_dir;
+        _json_task["uuid"] = task.uuid;
         _json_task["commands"] = json::array();
         for (auto &cmd : task.commands)
         {
@@ -223,7 +290,7 @@ namespace flowhook
         for (auto &t : config_obj["tasks"])
         {
             Task _ts = TRY(convert_json_to_task(t), void);
-            if (_ts.id == task.id)
+            if (_ts.working_dir == task.working_dir)
             {
                 return Result<void>::Err(FWError::make(
                     ErrorCode::TASK_ALREADY_EXISTS, "Error: task already exists, use update_task to update it"));
@@ -241,7 +308,10 @@ namespace flowhook
         for (auto it = config_obj["tasks"].begin(); it != config_obj["tasks"].end(); it++)
         {
             string id = it->at("working_directory");
-            if (id == task.id)
+            // uuid match lets a task whose directory moved away be updated
+            // in place (re-anchoring); the persisted uuid never changes
+            string uuid = it->value("uuid", "");
+            if (id == task.working_dir || (!task.uuid.empty() && uuid == task.uuid))
             {
                 json _json_task = TRY(convert_task_to_json(task), void);
                 *it = _json_task;
@@ -280,9 +350,12 @@ namespace flowhook
         for (auto it = config_obj["tasks"].begin(); it != config_obj["tasks"].end(); it++)
         {
             string id = it->at("working_directory");
-            if (id == task.id)
+            string uuid = it->value("uuid", "");
+            if (id == task.working_dir || (!task.uuid.empty() && uuid == task.uuid))
             {
                 config_obj["tasks"].erase(it);
+                isflushed = false;
+                flush();
                 return Result<void>::Ok();
             }
         }
@@ -296,7 +369,8 @@ namespace flowhook
         {
             Task _task;
             _task.name = it->at("task_name");
-            _task.id = it->at("working_directory");
+            _task.working_dir = it->at("working_directory");
+            _task.uuid = it->value("uuid", "");
             _task.commands = it->at("commands");
             _task.file_paths = it->at("file_paths");
             _task.dir_paths = it->at("dir_paths");
